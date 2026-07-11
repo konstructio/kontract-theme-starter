@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>kontract theme starter</title>
+  <style>
+    :root { --bg:#111518; --surface:#192124; --line:#3b4954; --hi:#f3f5f7; --mid:#9fafbc; --accent:#00ff6f; }
+    body { background:var(--bg); color:var(--mid); font-family:ui-monospace,monospace; margin:0; padding:32px; }
+    h1 { color:var(--hi); font-size:20px; margin:0 0 4px; }
+    .sub { font-size:12px; margin-bottom:24px; }
+    .sub b { color:var(--accent); }
+    section { border:1px solid var(--line); background:var(--surface); border-radius:6px; padding:14px 16px; margin-bottom:14px; }
+    section h2 { color:var(--hi); font-size:13px; margin:0 0 10px; text-transform:uppercase; letter-spacing:.1em; }
+    .item { display:flex; gap:12px; align-items:baseline; padding:6px 0; border-top:1px solid rgba(59,73,84,.4); font-size:13px; flex-wrap:wrap; }
+    .item b { color:var(--hi); }
+    .bar { flex:1 1 120px; height:6px; background:#263237; border-radius:3px; overflow:hidden; min-width:80px; }
+    .bar i { display:block; height:100%; background:var(--accent); }
+    .phase-Live { color:var(--accent); }
+    .phase-Failed { color:#fb2c37; }
+    .err { color:#fb2c37; }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <h1>kontract theme starter</h1>
+  <div class="sub">a minimal theme — replace this UI with your metaphor · powered by <b>the kontract</b></div>
+  <div id="root">loading…</div>
+
+  <script src="kontract.js"></script>
+  <script>
+    const root = document.getElementById("root");
+    // The org namespace arrives as a query param from the launcher (?org=…),
+    // falling back to a path segment if you deploy per-org.
+    const org = new URLSearchParams(location.search).get("org");
+
+    async function render() {
+      if (!kontract.hasToken()) {
+        root.innerHTML = "<section><h2>not launched</h2><div class='item'>Open this theme from Konstruct → PaaS → Kontracts so it receives your session.</div></section>";
+        return;
+      }
+      if (!org) {
+        root.innerHTML = "<section><h2>no org</h2><div class='item'>Launcher must pass ?org=&lt;namespace&gt;.</div></section>";
+        return;
+      }
+      try {
+        const d = await kontract.discover(org);
+        const zones = await kontract.zones(org).catch(() => ({ zones: [] }));
+        const apps = await kontract.apps(org).catch(() => ({ apps: [] }));
+        const zoneRows = (zones.zones || []).map(z => {
+          const cap = parseFloat(z.status?.capacity_cpu || "0") || 0;
+          const used = parseFloat(z.status?.allocated_cpu || "0") || 0;
+          const pct = cap ? Math.min(100, (used / cap) * 100) : 0;
+          return `<div class="item"><b>${z.name}</b> <span>${z.band}${z.free ? " · free" : ""}</span>
+            <span class="bar"><i style="width:${pct}%"></i></span>
+            <span>${used}/${cap} cpu · ${z.status?.apps ?? 0} apps</span></div>`;
+        }).join("") || "<div class='item'>no zones yet</div>";
+        const appRows = (apps.apps || []).map(a =>
+          `<div class="item"><b>${a.app_name || a.name}</b>
+            <span class="phase-${a.status?.phase || ""}">${a.status?.phase || "—"}</span>
+            ${a.status?.url ? `<a href="${a.status.url}" target="_blank" rel="noopener">${a.status.url.replace("https://","")}</a>` : ""}
+          </div>`).join("") || "<div class='item'>no apps yet</div>";
+        root.innerHTML = `
+          <section><h2>org</h2><div class="item"><b>${d.org?.display_name || org}</b><span>capabilities: ${(d.capabilities||[]).join(", ")}</span></div></section>
+          <section><h2>zones</h2>${zoneRows}</section>
+          <section><h2>apps</h2>${appRows}</section>`;
+      } catch (e) {
+        root.innerHTML = `<section><h2>error</h2><div class="item err">${e.message}</div></section>`;
+      }
+    }
+    render();
+    setInterval(render, 15000);
+  </script>
+</body>
+</html>
