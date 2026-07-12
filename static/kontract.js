@@ -9,18 +9,19 @@
  */
 
 const kontract = (() => {
-  const API = ""; // same-origin proxy or set your platform origin, e.g. "https://konstruct.example.com"
-
-  function takeTokenFromFragment() {
-    const m = location.hash.match(/[#&]token=([^&]+)/);
-    if (m) {
-      sessionStorage.setItem("kontract.token", decodeURIComponent(m[1]));
-      history.replaceState(null, "", location.pathname + location.search);
-    }
-    return sessionStorage.getItem("kontract.token");
+  function takeFromFragment() {
+    const t = location.hash.match(/[#&]token=([^&]+)/);
+    const a = location.hash.match(/[#&]api=([^&]+)/);
+    if (t) sessionStorage.setItem("kontract.token", decodeURIComponent(t[1]));
+    if (a) sessionStorage.setItem("kontract.api", decodeURIComponent(a[1]));
+    if (t || a) history.replaceState(null, "", location.pathname + location.search);
   }
 
-  const token = takeTokenFromFragment();
+  takeFromFragment();
+  const token = sessionStorage.getItem("kontract.token");
+  // The launcher passes the platform origin alongside the token; fall back to
+  // same-origin for themes served behind a proxy.
+  const API = sessionStorage.getItem("kontract.api") || "";
 
   async function call(method, path, body) {
     const res = await fetch(`${API}/api/v1${path}`, {
