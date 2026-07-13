@@ -1,3 +1,3 @@
-module kontract-theme-starter
+module github.com/konstructio/kontract-theme-starter
 
-go 1.22
+go 1.23
