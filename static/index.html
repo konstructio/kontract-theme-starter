@@ -34,18 +34,22 @@
     // falling back to a path segment if you deploy per-org.
     const org = new URLSearchParams(location.search).get("org");
 
+    // API data is org-controlled, not theme-controlled — escape it anyway
+    // before it reaches innerHTML.
+    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
     function zoneRow(z) {
       const cap = parseFloat(z.status?.capacity_cpu || "0") || 0;
       const used = parseFloat(z.status?.allocated_cpu || "0") || 0;
       const pct = cap ? Math.min(100, (used / cap) * 100) : 0;
-      return `<div class="item"><b>${z.name}</b> <span>${z.band}${z.free ? " · free" : ""}</span>
+      return `<div class="item"><b>${esc(z.name)}</b> <span>${esc(z.band)}${z.free ? " · free" : ""}</span>
         <span class="bar"><i style="width:${pct}%"></i></span>
-        <span>${used}/${cap} cpu · ${z.status?.apps ?? 0} apps</span></div>`;
+        <span>${used}/${cap} cpu · ${esc(z.status?.apps ?? 0)} apps</span></div>`;
     }
     function appRow(a) {
-      return `<div class="item"><b>${a.app_name || a.name}</b>
-        <span class="phase-${a.status?.phase || ""}">${a.status?.phase || "—"}</span>
-        ${a.status?.url ? `<a href="${a.status.url}" target="_blank" rel="noopener">${a.status.url.replace("https://","")}</a>` : ""}
+      const url = typeof a.status?.url === "string" && a.status.url.startsWith("https://") ? a.status.url : "";
+      return `<div class="item"><b>${esc(a.app_name || a.name)}</b>
+        <span class="phase-${esc(a.status?.phase || "")}">${esc(a.status?.phase || "—")}</span>
+        ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(url.replace("https://",""))}</a>` : ""}
       </div>`;
     }
 
@@ -73,14 +77,14 @@
           ${SAMPLE_APPS.map(appRow).join("")}
         </section>
         <section><h2>next steps</h2>
-          <div class="item">1 · Open this theme from <b>Konstruct → PaaS → Kontracts</b> — the launcher passes your session, and this page comes alive with your org's data.</div>
+          <div class="item">1 · Open this theme from <b>Konstruct → PaaS → Kontracts</b> — this page comes alive with your org's data. Your session never leaves Konstruct; the theme asks the platform for data over postMessage.</div>
           <div class="item">2 · Make it yours: fork this repository, replace the UI, keep <b>kontract.js</b>. Push to your branch and the platform rebuilds and redeploys it automatically.</div>
           <div class="item">3 · Read the theme authoring guide (<b>KONTRACT.md</b> in this repository) — or point an AI assistant at it and describe your metaphor.</div>
         </section>`;
     }
 
     async function render() {
-      if (!kontract.hasToken()) {
+      if (!kontract.isLaunched()) {
         renderWelcome();
         return;
       }
@@ -98,11 +102,11 @@
         const zoneRows = zoneList.map(zoneRow).join("") || "<div class='item'>no zones yet</div>";
         const appRows = appList.map(appRow).join("") || "<div class='item'>no apps yet</div>";
         root.innerHTML = `
-          <section><h2>org</h2><div class="item"><b>${d.org?.display_name || org}</b><span>capabilities: ${(d.capabilities||[]).join(", ")}</span></div></section>
+          <section><h2>org</h2><div class="item"><b>${esc(d.org?.display_name || org)}</b><span>capabilities: ${esc((d.capabilities||[]).join(", "))}</span></div></section>
           <section><h2>zones</h2>${zoneRows}</section>
           <section><h2>apps</h2>${appRows}</section>`;
       } catch (e) {
-        root.innerHTML = `<section><h2>error</h2><div class="item err">${e.message}</div></section>`;
+        root.innerHTML = `<section><h2>error</h2><div class="item err">${esc(e.message)}</div></section>`;
       }
     }
     render();
