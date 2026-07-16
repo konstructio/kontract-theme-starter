@@ -1,116 +1,308 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>kontract theme starter</title>
-  <style>
-    :root { --bg:#111518; --surface:#192124; --line:#3b4954; --hi:#f3f5f7; --mid:#9fafbc; --accent:#00ff6f; }
-    body { background:var(--bg); color:var(--mid); font-family:ui-monospace,monospace; margin:0; padding:32px; }
-    h1 { color:var(--hi); font-size:20px; margin:0 0 4px; }
-    .sub { font-size:12px; margin-bottom:24px; }
-    .sub b { color:var(--accent); }
-    section { border:1px solid var(--line); background:var(--surface); border-radius:6px; padding:14px 16px; margin-bottom:14px; }
-    section h2 { color:var(--hi); font-size:13px; margin:0 0 10px; text-transform:uppercase; letter-spacing:.1em; }
-    .item { display:flex; gap:12px; align-items:baseline; padding:6px 0; border-top:1px solid rgba(59,73,84,.4); font-size:13px; flex-wrap:wrap; }
-    .item b { color:var(--hi); }
-    .bar { flex:1 1 120px; height:6px; background:#263237; border-radius:3px; overflow:hidden; min-width:80px; }
-    .bar i { display:block; height:100%; background:var(--accent); }
-    .phase-Live { color:var(--accent); }
-    .phase-Failed { color:#fb2c37; }
-    .err { color:#fb2c37; }
-    a { color:var(--accent); }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kontract Starter · Konstruct</title>
+<link rel="icon" href="kontract-icon.png" />
+<style>
+  :root{
+    --bg:#111518; --panel:#161b1f; --panel2:#192124; --line:#26313a; --line2:#38454f;
+    --ink:#f3f5f7; --ink2:#c7ced3; --mut:#9fafbc; --mut2:#5b6c7c;
+    --green:#00ff6f; --green2:#00c957; --blue:#00bcff; --amber:#fdc700; --red:#fb2c37;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --mono:ui-monospace,'Reddit Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px}
+  a{color:var(--green);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 24px 56px}
+  .mono{font-family:var(--mono)}
+
+  header{display:flex;align-items:center;gap:14px;padding:14px 0 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:.02em;font-size:16px}
+  .brand svg{width:24px;height:24px}
+  .tag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line2);border-radius:3px;padding:3px 8px}
+  .spacer{flex:1}
+  .docsbtn{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:#0c1416;background:var(--green);border-radius:4px;padding:6px 12px;font-weight:700}
+  .docsbtn:hover{text-decoration:none;background:var(--green2)}
+
+  .section-h{display:flex;align-items:center;gap:12px;margin:34px 0 14px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut);font-weight:700}
+  .section-h span{flex:1;height:1px;background:var(--line)}
+
+  /* hero */
+  .hero{padding:34px 0 6px}
+  .hero h1{font-size:30px;font-weight:800;letter-spacing:-.01em;margin:0 0 12px;color:var(--ink)}
+  .hero h1 b{color:var(--green)}
+  .hero p{font-size:15px;color:var(--ink2);max-width:760px;margin:0 0 6px}
+  .hero .meta{font-family:var(--mono);font-size:12px;color:var(--mut);margin-top:14px}
+
+  /* flow diagram */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin-top:4px}
+  .node{flex:1 1 220px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+  .node .n{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700;margin-bottom:6px}
+  .node .b{font-weight:700;color:var(--ink);font-size:14px}
+  .node .d{font-size:12px;color:var(--mut);margin-top:5px}
+  .node.self{border-color:rgba(0,255,111,.35)} .node.self .b{color:var(--green)}
+  .arrow{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:0 12px;min-width:120px;color:var(--mut);font-family:var(--mono);font-size:10px;text-align:center;letter-spacing:.04em}
+  .arrow .a{color:var(--green);font-size:18px;line-height:1}
+  .arrow .l{margin-top:4px}
+  @media(max-width:760px){.arrow{min-width:0;flex-direction:row;gap:8px;padding:8px 0;transform:rotate(90deg)}}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:2px solid var(--green);border-radius:6px;padding:12px 15px;margin-top:14px;font-size:13px;color:var(--ink2)}
+  .note b{color:var(--ink)}
+
+  /* capability grid */
+  .caps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.caps{grid-template-columns:1fr}}
+  .capcol{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+  .capcol .ch{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+  .capcol .ch .t{font-size:13px;font-weight:700;color:var(--ink)}
+  .badge{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;border-radius:3px;padding:2px 7px;font-weight:700}
+  .badge.read{color:var(--blue);border:1px solid rgba(0,188,255,.4)}
+  .badge.write{color:var(--amber);border:1px solid rgba(253,199,63,.4)}
+  .badge.you{color:var(--green);border:1px solid rgba(0,255,111,.4)}
+  .op{padding:7px 0;border-top:1px solid rgba(56,69,79,.5);font-size:13px}
+  .op:first-of-type{border-top:none}
+  .op code{font-family:var(--mono);color:var(--green);font-size:12px}
+  .op .od{color:var(--mut);display:block;font-size:12px;margin-top:1px}
+
+  /* profiles */
+  .profiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.profiles{grid-template-columns:1fr}}
+  .prof{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px}
+  .prof .pn{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--green);font-weight:700}
+  .prof .pt{font-weight:700;font-size:15px;margin:6px 0 6px;color:var(--ink)}
+  .prof .pd{font-size:13px;color:var(--mut)}
+  .prof .eg{font-family:var(--mono);font-size:11px;color:var(--mut2);margin-top:10px}
+
+  /* preview + generic panels */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin-bottom:14px}
+  .panel h2{font-size:13px;font-weight:700;color:var(--ink);margin:0 0 12px;display:flex;align-items:center;gap:10px}
+  .demo-badge{font-family:var(--mono);font-size:10px;color:var(--amber);border:1px solid rgba(253,199,63,.4);border-radius:3px;padding:2px 7px;letter-spacing:.1em}
+  .sub{font-size:12px;color:var(--mut);margin-bottom:10px}
+  .item{display:flex;gap:12px;align-items:baseline;padding:8px 0;border-top:1px solid rgba(56,69,79,.5);font-size:13px;flex-wrap:wrap}
+  .item:first-child{border-top:none}
+  .item b{color:var(--ink)}
+  .grp{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--mut);text-transform:uppercase;padding-top:12px}
+  .bar{flex:1 1 120px;height:7px;background:var(--panel2);border-radius:999px;overflow:hidden;min-width:80px;border:1px solid var(--line)}
+  .bar i{display:block;height:100%;background:var(--green);border-radius:999px}
+  .chip{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line2);color:var(--mut);border-radius:999px;padding:2px 9px}
+  .st{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;display:inline-flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .st.Live{color:var(--green)} .st.Live .dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .st.Building{color:var(--blue)} .st.Building .dot{background:var(--blue)}
+  .st.Failed{color:var(--red)} .st.Failed .dot{background:var(--red)}
+  .url{font-family:var(--mono);font-size:11px}
+  .err{color:var(--red);font-family:var(--mono);font-size:12px}
+
+  /* steps */
+  .steps{counter-reset:s}
+  .step{display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--line)}
+  .step:first-child{border-top:none}
+  .step .num{counter-increment:s;flex:0 0 28px;height:28px;border-radius:50%;border:1px solid var(--green);color:var(--green);font-family:var(--mono);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .step .num::before{content:counter(s)}
+  .step .sc{font-size:13px;color:var(--ink2)}
+  .step .sc b{color:var(--ink)}
+  .step code{font-family:var(--mono);color:var(--green);font-size:12px}
+
+  .doclinks{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media(max-width:640px){.doclinks{grid-template-columns:1fr}}
+  .doclink{display:flex;flex-direction:column;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:11px 14px}
+  .doclink:hover{border-color:var(--line2);text-decoration:none}
+  .doclink .dt{font-weight:700;color:var(--ink);font-size:13px}
+  .doclink .dd{font-size:12px;color:var(--mut)}
+
+  footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;color:var(--mut2);font-size:12px;flex-wrap:wrap}
+  .live-banner{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid rgba(0,255,111,.3);border-radius:8px;padding:11px 15px;margin:18px 0 6px;font-size:13px;color:var(--ink2)}
+  .live-banner .dot{background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,255,111,.5)}70%{box-shadow:0 0 0 6px rgba(0,255,111,0)}100%{box-shadow:0 0 0 0 rgba(0,255,111,0)}}
+</style>
 </head>
 <body>
-  <h1>kontract theme starter</h1>
-  <div class="sub">a minimal theme — replace this UI with your metaphor · powered by <b>the kontract</b></div>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.6" fill="var(--green)" stroke="none"/></svg>
+      Kontract Starter
+    </div>
+    <span class="tag">reference theme</span>
+    <div class="spacer"></div>
+    <a class="docsbtn" href="https://konstruct.civo.com/docs/next/konduit" target="_blank" rel="noopener">Read the docs →</a>
+  </header>
   <div id="root">loading…</div>
+</div>
 
-  <script src="kontract.js"></script>
-  <script>
-    const root = document.getElementById("root");
-    // The org namespace arrives as a query param from the launcher (?org=…),
-    // falling back to a path segment if you deploy per-org.
-    const org = new URLSearchParams(location.search).get("org");
+<script src="kontract.js"></script>
+<script>
+  const root = document.getElementById("root");
+  const DOCS = "https://konstruct.civo.com/docs/next/konduit";
+  const org = new URLSearchParams(location.search).get("org");
 
-    // API data is org-controlled, not theme-controlled — escape it anyway
-    // before it reaches innerHTML.
-    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-    function zoneRow(z) {
-      const cap = parseFloat(z.status?.capacity_cpu || "0") || 0;
-      const used = parseFloat(z.status?.allocated_cpu || "0") || 0;
-      const pct = cap ? Math.min(100, (used / cap) * 100) : 0;
-      return `<div class="item"><b>${esc(z.name)}</b> <span>${esc(z.band)}${z.free ? " · free" : ""}</span>
-        <span class="bar"><i style="width:${pct}%"></i></span>
-        <span>${used}/${cap} cpu · ${esc(z.status?.apps ?? 0)} apps</span></div>`;
-    }
-    function appRow(a) {
-      const url = typeof a.status?.url === "string" && a.status.url.startsWith("https://") ? a.status.url : "";
-      return `<div class="item"><b>${esc(a.app_name || a.name)}</b>
-        <span class="phase-${esc(a.status?.phase || "")}">${esc(a.status?.phase || "—")}</span>
-        ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(url.replace("https://",""))}</a>` : ""}
-      </div>`;
-    }
+  // API data is org-controlled, not theme-controlled — escape it before innerHTML.
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const num = (v) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 
-    // Unlaunched visitors get a tour, not a dead end: what a theme is, a
-    // sample-data preview of what this page renders once launched, and the
-    // steps to make one of their own.
-    const SAMPLE_ZONES = [
-      { name: "production", band: "small", free: true,  status: { capacity_cpu: "10", allocated_cpu: "6", apps: 3 } },
-      { name: "staging",    band: "small", free: false, status: { capacity_cpu: "10", allocated_cpu: "2", apps: 1 } },
+  function zoneRow(z){
+    const cap = num(z.status?.capacity_cpu), used = num(z.status?.allocated_cpu);
+    const pct = cap ? Math.min(100, (used/cap)*100) : 0;
+    return `<div class="item"><b>${esc(z.name)}</b>
+      <span class="chip">${esc(z.band || "—")}</span>${z.free ? '<span class="chip" style="color:var(--green);border-color:rgba(0,255,111,.4)">free</span>' : ""}
+      <span class="bar"><i style="width:${pct}%"></i></span>
+      <span class="mono" style="color:var(--mut)">${used}/${cap} cpu · ${esc(z.status?.apps ?? 0)} apps</span></div>`;
+  }
+  function appRow(a){
+    const ph = a.status?.phase || "—";
+    const url = typeof a.status?.url === "string" && a.status.url.startsWith("https://") ? a.status.url : "";
+    return `<div class="item"><span class="st ${esc(ph)}"><span class="dot"></span>${esc(ph)}</span>
+      <b>${esc(a.app_name || a.name)}</b>
+      ${url ? `<a class="url" href="${esc(url)}" target="_blank" rel="noopener">${esc(url.replace("https://",""))}</a>` : '<span class="mono" style="color:var(--mut2)">no endpoint yet</span>'}</div>`;
+  }
+
+  const SAMPLE_ZONES = [
+    { name:"production", band:"medium", free:true,  status:{ capacity_cpu:"20", allocated_cpu:"13", apps:3 } },
+    { name:"staging",    band:"small",  free:false, status:{ capacity_cpu:"10", allocated_cpu:"3",  apps:1 } },
+  ];
+  const SAMPLE_APPS = [
+    { app_name:"storefront", status:{ phase:"Live", url:"https://storefront.example.com" } },
+    { app_name:"checkout",   status:{ phase:"Live", url:"https://checkout.example.com" } },
+    { app_name:"search",     status:{ phase:"Building" } },
+  ];
+
+  // ---- capability + profile content (kept in sync with kontract.js) ----
+  const CAPS = [
+    { title:"Observe", badge:"read", cls:"read", ops:[
+      ["discover","what your org is and which capabilities it exposes"],
+      ["zones","the capacity you own — clusters, bands, headroom"],
+      ["apps","everything you've shipped, with live phase and URL"],
+      ["metrics","CPU and memory time-series, per app or fleet-wide"],
+    ]},
+    { title:"Build", badge:"write", cls:"write", ops:[
+      ["createZone","claim new capacity in a metaphor of your choosing"],
+      ["shipApp","deploy an app from a connected repo and branch"],
+      ["updateApp","change branch, size or replicas of a running app"],
+      ["redeploy","re-roll the latest build"],
+      ["deleteApp","tear an app down"],
+      ["appRepos","list the repos an org can deploy from"],
+      ["buildLogs","stream a build's log lines"],
+    ]},
+    { title:"Personalize", badge:"you", cls:"you", ops:[
+      ["character","load the player/persona your theme has saved"],
+      ["saveCharacter","persist cosmetics, level, or preferences"],
+    ]},
+  ];
+  const PROFILES = [
+    { name:"Informational", t:"A live report", d:"Read-only. Turns your org's data into dashboards and reports. Never mutates anything — safe on production.", eg:"e.g. Kontrol Room" },
+    { name:"Interactive", t:"A working console", d:"Reads and writes. Ship, scale, re-roll and tear down apps, claim zones, watch build logs — all through the contract.", eg:"e.g. Konduit" },
+    { name:"Game", t:"An arcade", d:"Interactive plus progression: a character, XP, quests and cosmetics that turn shipping software into play.", eg:"e.g. Ship It!" },
+  ];
+
+  function capCol(c){
+    return `<div class="capcol"><div class="ch"><span class="t">${c.title}</span><span class="badge ${c.cls}">${c.badge}</span></div>
+      ${c.ops.map(([n,d]) => `<div class="op"><code>kontract.${esc(n)}()</code><span class="od">${esc(d)}</span></div>`).join("")}</div>`;
+  }
+  function profCard(p){
+    return `<div class="prof"><div class="pn">${esc(p.name)}</div><div class="pt">${esc(p.t)}</div><div class="pd">${esc(p.d)}</div><div class="eg">${esc(p.eg)}</div></div>`;
+  }
+
+  function docLinks(){
+    const L = [
+      ["The kontract", "The postMessage contract, transport and security model", "/kontract"],
+      ["Themes", "What a theme is and how it's delivered", "/themes"],
+      ["Creating a theme", "Build one by hand, step by step", "/creating-a-theme"],
+      ["Theme specification", "The conformance checklist every theme meets", "/theme-spec"],
+      ["The game formula", "Turn a PaaS into progression and play", "/game-formula"],
+      ["This theme", "The Kontract Starter reference", "/themes/starter"],
     ];
-    const SAMPLE_APPS = [
-      { app_name: "storefront", status: { phase: "Live", url: "https://storefront.example.com" } },
-      { app_name: "checkout",   status: { phase: "Building" } },
-    ];
-    function renderWelcome() {
-      root.innerHTML = `
-        <section><h2>what is this?</h2>
-          <div class="item">You're looking at a <b>kontract theme</b> — a frontend that lives in its own Git repository and is built, deployed, and served by the Konstruct platform's own delivery pipeline. Once launched from Konstruct it renders your organization's zones (capacity you own) and apps (things you've shipped) — using any metaphor its author chooses: planets, neighborhoods, race teams, or plain business like this one.</div>
-        </section>
-        <section><h2>preview — sample data</h2>
-          <div class="item">When launched with your session, the sections below show your real organization instead of these examples.</div>
-          <div class="item" style="border-top:none"><b style="letter-spacing:.1em">ZONES</b></div>
-          ${SAMPLE_ZONES.map(zoneRow).join("")}
-          <div class="item"><b style="letter-spacing:.1em">APPS</b></div>
-          ${SAMPLE_APPS.map(appRow).join("")}
-        </section>
-        <section><h2>next steps</h2>
-          <div class="item">1 · Open this theme from <b>Konstruct → PaaS → Kontracts</b> — this page comes alive with your org's data. Your session never leaves Konstruct; the theme asks the platform for data over postMessage.</div>
-          <div class="item">2 · Make it yours: fork this repository, replace the UI, keep <b>kontract.js</b>. Push to your branch and the platform rebuilds and redeploys it automatically.</div>
-          <div class="item">3 · Read the theme authoring guide (<b>KONTRACT.md</b> in this repository) — or point an AI assistant at it and describe your metaphor.</div>
-        </section>`;
-    }
+    return `<div class="doclinks">${L.map(([t,d,p]) =>
+      `<a class="doclink" href="${DOCS}${p}" target="_blank" rel="noopener"><span class="dt">${t} →</span><span class="dd">${d}</span></a>`).join("")}</div>`;
+  }
 
-    async function render() {
-      if (!kontract.isLaunched()) {
-        renderWelcome();
-        return;
-      }
-      if (!org) {
-        root.innerHTML = "<section><h2>no org</h2><div class='item'>Launcher must pass ?org=&lt;namespace&gt;.</div></section>";
-        return;
-      }
-      try {
-        const d = await kontract.discover(org);
-        const zones = await kontract.zones(org).catch(() => ({ zones: [] }));
-        const apps = await kontract.apps(org).catch(() => ({ apps: [] }));
-        // The contract API returns bare arrays; tolerate envelopes too.
-        const zoneList = Array.isArray(zones) ? zones : (zones.zones || []);
-        const appList = Array.isArray(apps) ? apps : (apps.apps || []);
-        const zoneRows = zoneList.map(zoneRow).join("") || "<div class='item'>no zones yet</div>";
-        const appRows = appList.map(appRow).join("") || "<div class='item'>no apps yet</div>";
-        root.innerHTML = `
-          <section><h2>org</h2><div class="item"><b>${esc(d.org?.display_name || org)}</b><span>capabilities: ${esc((d.capabilities||[]).join(", "))}</span></div></section>
-          <section><h2>zones</h2>${zoneRows}</section>
-          <section><h2>apps</h2>${appRows}</section>`;
-      } catch (e) {
-        root.innerHTML = `<section><h2>error</h2><div class="item err">${esc(e.message)}</div></section>`;
-      }
+  function renderWelcome(){
+    root.innerHTML = `
+      <div class="hero">
+        <h1>This is a <b>kontract theme</b>.</h1>
+        <p>A theme is a frontend that lives in its own Git repository and is built, deployed and served by Konstruct's own delivery pipeline. Launched from the platform, it renders your organization's <b>zones</b> (the capacity you own) and <b>apps</b> (the things you ship) — as any metaphor its author chooses: planets, city blocks, race teams, or a plain business console like this one.</p>
+        <p class="hero-meta mono" style="color:var(--mut);margin-top:14px">You're viewing the starter directly, so it's showing this guide. Launch it from Konstruct and it comes alive with your real data.</p>
+      </div>
+
+      <div class="section-h">How it works<span></span></div>
+      <div class="flow">
+        <div class="node self"><div class="n">Your theme</div><div class="b">Sandboxed iframe</div><div class="d">Runs on Konstruct infrastructure with no credentials, no token, nothing in storage.</div></div>
+        <div class="arrow"><div class="a">→</div><div class="l">postMessage<br/>(no secrets)</div></div>
+        <div class="node"><div class="n">Konstruct</div><div class="b">The broker</div><div class="d">Validates the sender, allows only kontract ops, and pins every call to the org you were launched for.</div></div>
+        <div class="arrow"><div class="a">→</div><div class="l">your session<br/>on its origin</div></div>
+        <div class="node"><div class="n">Platform</div><div class="b">The API</div><div class="d">Performs the real call as the signed-in user and replies to your theme's origin only.</div></div>
+      </div>
+      <div class="note">Your theme never touches a credential. It asks for data; the platform does the work and hands back the result. That's the whole contract — and it's why a theme can be a public, forkable web page and still be safe. <a href="${DOCS}/kontract" target="_blank" rel="noopener">Read the contract →</a></div>
+
+      <div class="section-h">What you can build with the contract<span></span></div>
+      <div class="caps">${CAPS.map(capCol).join("")}</div>
+
+      <div class="section-h">Three kinds of theme<span></span></div>
+      <div class="profiles">${PROFILES.map(profCard).join("")}</div>
+
+      <div class="section-h">See it with data<span></span></div>
+      <div class="panel">
+        <h2>Your organization <span class="demo-badge">sample data</span></h2>
+        <div class="sub">Launched with your session, these sections show your real zones and apps instead of these examples — this is exactly the code you'll fork below.</div>
+        <div class="grp">Zones</div>
+        ${SAMPLE_ZONES.map(zoneRow).join("")}
+        <div class="grp">Apps</div>
+        ${SAMPLE_APPS.map(appRow).join("")}
+      </div>
+
+      <div class="section-h">Make it your own<span></span></div>
+      <div class="panel steps">
+        <div class="step"><div class="num"></div><div class="sc"><b>Get a copy.</b> Fork this repository — or open <b>Kontract Settings</b> in Konstruct and let the <b>Forge</b> generate a whole new theme from a description.</div></div>
+        <div class="step"><div class="num"></div><div class="sc"><b>Replace this UI.</b> Everything you see is in <code>static/index.html</code>. Build your metaphor there. Keep <code>kontract.js</code> exactly as-is — it's the client for the contract above.</div></div>
+        <div class="step"><div class="num"></div><div class="sc"><b>Push.</b> Konstruct watches your repo, rebuilds the image and redeploys automatically. No chart, no pipeline to wire up.</div></div>
+        <div class="step"><div class="num"></div><div class="sc"><b>Register &amp; launch.</b> Point Konstruct at your repo, launch it, and your theme renders live org data. Read <code>KONTRACT.md</code> in this repo, or the docs, to go deeper.</div></div>
+      </div>
+
+      <div class="section-h">Documentation<span></span></div>
+      ${docLinks()}
+
+      <footer><span>Kontract Starter · the reference theme</span><span class="chip">informational</span><span>powered by</span><span class="chip">Konstruct</span></footer>`;
+  }
+
+  async function renderLive(){
+    root.innerHTML = `<div class="live-banner"><span class="dot" style="width:8px;height:8px;border-radius:50%"></span>
+      Live — talking to <b style="color:var(--ink)">&nbsp;${esc(org)}&nbsp;</b> through the kontract. No credentials ever reached this page. <a href="${DOCS}" target="_blank" rel="noopener">&nbsp;What is this? →</a></div>
+      <div id="live">loading your organization…</div>`;
+    const live = document.getElementById("live");
+    try {
+      const d = await kontract.discover(org);
+      const [zonesR, appsR] = await Promise.all([
+        kontract.zones(org).catch(() => []),
+        kontract.apps(org).catch(() => []),
+      ]);
+      const zoneList = Array.isArray(zonesR) ? zonesR : (zonesR.zones || []);
+      const appList  = Array.isArray(appsR)  ? appsR  : (appsR.apps  || []);
+      live.innerHTML = `
+        <div class="panel"><h2>Organization</h2>
+          <div class="item"><b>${esc(d.org?.display_name || org)}</b>
+            ${(d.capabilities||[]).map(c => `<span class="chip">${esc(c)}</span>`).join("")}</div></div>
+        <div class="panel"><h2>Zones</h2>${zoneList.map(zoneRow).join("") || '<div class="item mono" style="color:var(--mut)">No zones yet — claim capacity from Konstruct.</div>'}</div>
+        <div class="panel"><h2>Applications</h2>${appList.map(appRow).join("") || '<div class="item mono" style="color:var(--mut)">No apps yet — ship one from a connected repo.</div>'}</div>
+        <div class="panel" style="border-left:2px solid var(--green)"><h2>This is the starter</h2>
+          <div class="sub">You're seeing real data rendered by the reference theme. Fork it, replace the UI, keep <code style="font-family:var(--mono);color:var(--green)">kontract.js</code>, and push — Konstruct rebuilds it for you.</div>
+          <div class="item" style="border-top:none;gap:16px"><a href="${DOCS}/creating-a-theme" target="_blank" rel="noopener">Creating a theme →</a><a href="${DOCS}/theme-spec" target="_blank" rel="noopener">Theme spec →</a><a href="${DOCS}/kontract" target="_blank" rel="noopener">The kontract →</a></div></div>`;
+    } catch (e) {
+      live.innerHTML = `<div class="panel"><h2>Couldn't load your org</h2><div class="err">${esc(e && e.message || e)}</div>
+        <div class="sub" style="margin-top:10px">The launcher passes <code style="font-family:var(--mono);color:var(--green)">?org=&lt;namespace&gt;</code>; the broker pins every call to it. <a href="${DOCS}/kontract" target="_blank" rel="noopener">Contract docs →</a></div></div>`;
     }
-    render();
-    setInterval(render, 15000);
-  </script>
+  }
+
+  function render(){
+    if (!kontract.isLaunched()) { renderWelcome(); return; }
+    renderLive();
+  }
+  render();
+  // Refresh the live view periodically; the welcome guide is static.
+  setInterval(() => { if (kontract.isLaunched()) renderLive(); }, 15000);
+</script>
 </body>
 </html>

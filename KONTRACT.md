@@ -29,8 +29,8 @@ what it does for you.
   Konstruct is deliberately unauthenticated.
 
 Allowed ops: `discover`, `zones`, `createZone`, `apps`, `appRepos`,
-`shipApp`, `updateApp`, `deleteApp`, `redeploy`, `buildLogs`, `character`,
-`saveCharacter`.
+`shipApp`, `updateApp`, `deleteApp`, `redeploy`, `buildLogs`, `metrics`,
+`character`, `saveCharacter`.
 
 v1 themes (token-in-fragment + direct API fetch) stop working once the
 platform removes theme-origin CORS: replace your copy of `kontract.js` with
