@@ -76,6 +76,9 @@ feature when its flag is present: `runtime-logs`, `quota`, `app-events`,
 - Ship into an environment: pass `zone_ref` and omit `environment` — the zone
   IS the environment and the platform mirrors it. Registering without an
   environment is rejected.
+- `zones()` ordering is a contract guarantee: creation order, oldest first.
+  Render the list as given — do not re-sort — so every theme agrees on
+  environment order.
 
 v1 themes (token-in-fragment + direct API fetch) stop working once the
 platform removes theme-origin CORS: replace your copy of `kontract.js` with
