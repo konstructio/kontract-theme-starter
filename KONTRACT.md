@@ -60,8 +60,8 @@ feature when its flag is present: `runtime-logs`, `quota`, `app-events`,
 
 ## Newer app fields
 
-- `shipApp`/`updateApp` accept `volume: {size}` — a single persistent
-  ReadWriteOnce disk; attaching one locks the app to 1 replica.
+- `shipApp`/`updateApp` accept `volume: {size, mount_path}` — a single persistent
+  ReadWriteOnce disk mounted at an absolute path (Konduit defaults to `/data`); attaching one locks the app to 1 replica.
 - `shipApp`/`updateApp` accept `custom_domain` — after saving, the app's
   `status.domain_token` is the TXT ownership proof: the user adds
   `TXT _konduit-challenge.<domain>` → `konduit-verify=<token>`, and
