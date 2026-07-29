@@ -174,19 +174,24 @@
   // ---- capability + profile content (kept in sync with kontract.js) ----
   const CAPS = [
     { title:"Observe", badge:"read", cls:"read", ops:[
-      ["discover","what your org is and which capabilities it exposes"],
-      ["zones","the capacity you own — clusters, bands, headroom"],
-      ["apps","everything you've shipped, with live phase and URL"],
-      ["metrics","CPU and memory time-series, per app or fleet-wide"],
+      ["discover","what your org is, its entitled app sizes, and which capabilities it exposes"],
+      ["zones","your logical environments — every app ships into one"],
+      ["apps","everything you've shipped, with live phase, URL, volume and domain state"],
+      ["metrics","cpu, memory, network and limit-ceiling time-series per app"],
+      ["quota","the org-wide allowance meter — cpu, memory, storage used vs limit"],
+      ["buildLogs","the latest build's log output"],
+    ]},
+    { title:"Live streams", badge:"push", cls:"read", ops:[
+      ["logs","live runtime log lines pushed from the app's pods (subscribe/unsubscribe)"],
+      ["appEvents","one push per app create/update/delete — refetch instead of polling"],
     ]},
     { title:"Build", badge:"write", cls:"write", ops:[
-      ["createZone","claim new capacity in a metaphor of your choosing"],
-      ["shipApp","deploy an app from a connected repo and branch"],
-      ["updateApp","change branch, size or replicas of a running app"],
+      ["createZone","create a new logical environment in a metaphor of your choosing"],
+      ["shipApp","deploy an app from a connected repo and branch into an environment"],
+      ["updateApp","change branch, size, replicas, volume or custom domain of a running app"],
       ["redeploy","re-roll the latest build"],
       ["deleteApp","tear an app down"],
       ["appRepos","list the repos an org can deploy from"],
-      ["buildLogs","stream a build's log lines"],
     ]},
     { title:"Personalize", badge:"you", cls:"you", ops:[
       ["character","load the player/persona your theme has saved"],
