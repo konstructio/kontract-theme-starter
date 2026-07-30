@@ -178,14 +178,17 @@
   // API data is org-controlled, not theme-controlled — escape it before innerHTML.
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
   const num = (v) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+  // "8500m" is millicores; "24" is cores. Quota and zone figures mix both.
+  const cores = (v) => { const t = String(v ?? "0").trim(); const n = parseFloat(t); return isFinite(n) ? (/m$/.test(t) ? n / 1000 : n) : 0; };
 
   function zoneRow(z){
-    const cap = num(z.status?.capacity_cpu), used = num(z.status?.allocated_cpu);
-    const pct = cap ? Math.min(100, (used/cap)*100) : 0;
+    // Zones are logical environments with no capacity of their own — the
+    // org-wide quota is the only gate. Show the zone's draw, not a ceiling.
+    const used = cores(z.status?.allocated_cpu);
     return `<div class="item"><b>${esc(z.name)}</b>
-      <span class="chip">${esc(z.band || "—")}</span>${z.free ? '<span class="chip" style="color:var(--green);border-color:rgba(0,255,111,.4)">free</span>' : ""}
-      <span class="bar"><i style="width:${pct}%"></i></span>
-      <span class="mono" style="color:var(--mut)">${used}/${cap} cpu · ${esc(z.status?.apps ?? 0)} apps</span></div>`;
+      ${z.free ? '<span class="chip" style="color:var(--green);border-color:rgba(0,255,111,.4)">free</span>' : ""}
+      <span style="flex:1"></span>
+      <span class="mono" style="color:var(--mut)">${used ? `${used} cpu drawn · ` : ""}${esc(z.status?.apps ?? 0)} apps</span></div>`;
   }
   function appRow(a){
     const ph = a.status?.phase || "—";
@@ -196,8 +199,8 @@
   }
 
   const SAMPLE_ZONES = [
-    { name:"production", band:"medium", free:true,  status:{ capacity_cpu:"20", allocated_cpu:"13", apps:3 } },
-    { name:"staging",    band:"small",  free:false, status:{ capacity_cpu:"10", allocated_cpu:"3",  apps:1 } },
+    { name:"production", free:true,  status:{ allocated_cpu:"13", apps:3 } },
+    { name:"staging",    free:false, status:{ allocated_cpu:"3",  apps:1 } },
   ];
   const SAMPLE_APPS = [
     { app_name:"storefront", status:{ phase:"Live", url:"https://storefront.example.com" } },
@@ -339,11 +342,11 @@
 
   function quotaRows(q){
     if (!q) return "";
-    const dims = [["cpu", "CPU", (v) => v], ["memory", "Memory", fmtGi], ["storage", "Storage", fmtGi]];
+    const dims = [["cpu", "CPU", (v) => String(cores(v))], ["memory", "Memory", fmtGi], ["storage", "Storage", fmtGi]];
     return dims.map(([k, label, f]) => {
       const d = q[k] || {};
-      const used = parseFloat(String(d.used || "0").replace(/Gi$/, "")) || 0;
-      const lim = parseFloat(String(d.limit || "0").replace(/Gi$/, "")) || 0;
+      const used = k === "cpu" ? cores(d.used) : parseFloat(String(d.used || "0").replace(/Gi$/, "")) || 0;
+      const lim = k === "cpu" ? cores(d.limit) : parseFloat(String(d.limit || "0").replace(/Gi$/, "")) || 0;
       const pct = lim ? Math.min(100, (used / lim) * 100) : 0;
       const fg = pct > 85 ? "var(--red)" : pct > 60 ? "var(--amber)" : "var(--green)";
       return `<div class="quota-row"><span class="ql">${label}</span>
