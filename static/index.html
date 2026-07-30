@@ -198,15 +198,6 @@
       ${url ? `<a class="url" href="${esc(url)}" target="_blank" rel="noopener">${esc(url.replace("https://",""))}</a>` : '<span class="mono" style="color:var(--mut2)">no endpoint yet</span>'}</div>`;
   }
 
-  const SAMPLE_ZONES = [
-    { name:"production", free:true,  status:{ allocated_cpu:"13", apps:3 } },
-    { name:"staging",    free:false, status:{ allocated_cpu:"3",  apps:1 } },
-  ];
-  const SAMPLE_APPS = [
-    { app_name:"storefront", status:{ phase:"Live", url:"https://storefront.example.com" } },
-    { app_name:"checkout",   status:{ phase:"Live", url:"https://checkout.example.com" } },
-    { app_name:"search",     status:{ phase:"Building" } },
-  ];
 
   // ---- capability + profile content (kept in sync with kontract.js) ----
   const CAPS = [
@@ -289,12 +280,8 @@
 
       <div class="section-h">See it with data<span></span></div>
       <div class="panel">
-        <h2>Your organization <span class="demo-badge">sample data</span></h2>
-        <div class="sub">Launched with your session, these sections show your real zones and apps instead of these examples — this is exactly the code you'll fork below.</div>
-        <div class="grp">Zones</div>
-        ${SAMPLE_ZONES.map(zoneRow).join("")}
-        <div class="grp">Apps</div>
-        ${SAMPLE_APPS.map(appRow).join("")}
+        <h2>Your organization</h2>
+        <div class="sub">Nothing to preview here on purpose — this theme never shows fictional data. Launch it from Konstruct and this section renders your real zones, apps, quota, metrics, and live logs. No data beats fake data.</div>
       </div>
 
       <div class="section-h">Make it your own<span></span></div>
