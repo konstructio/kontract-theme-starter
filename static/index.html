@@ -186,7 +186,7 @@
     // org-wide quota is the only gate. Show the zone's draw, not a ceiling.
     const used = cores(z.status?.allocated_cpu);
     return `<div class="item"><b>${esc(z.name)}</b>
-      ${z.free ? '<span class="chip" style="color:var(--green);border-color:rgba(0,255,111,.4)">free</span>' : ""}
+      
       <span style="flex:1"></span>
       <span class="mono" style="color:var(--mut)">${used ? `${used} cpu drawn · ` : ""}${esc(z.status?.apps ?? 0)} apps</span></div>`;
   }
@@ -224,6 +224,7 @@
     ]},
     { title:"Build", badge:"write", cls:"write", ops:[
       ["createZone","create a new logical environment in a metaphor of your choosing"],
+      ["deleteZone","remove an empty environment — refused (409) while apps still live there"],
       ["shipApp","deploy an app from a connected repo and branch into an environment"],
       ["updateApp","change branch, size, replicas, volume or custom domain of a running app"],
       ["redeploy","re-roll the latest build"],
