@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Kontract Starter: the reference mark — a calibration target with one
+       live signal. Bold at 36px on #10161d. -->
+  <circle cx="32" cy="32" r="26" fill="none" stroke="#2b3a44" stroke-width="3"/>
+  <circle cx="32" cy="32" r="26" fill="none" stroke="#00ff6f" stroke-width="3"
+          stroke-dasharray="122.5 41" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+  <g stroke="#4b5d6c" stroke-width="2.5" stroke-linecap="round">
+    <line x1="32" y1="2.5" x2="32" y2="9"/>
+    <line x1="32" y1="55" x2="32" y2="61.5"/>
+    <line x1="2.5" y1="32" x2="9" y2="32"/>
+    <line x1="55" y1="32" x2="61.5" y2="32"/>
+  </g>
+  <circle cx="32" cy="32" r="14" fill="none" stroke="#00bcff" stroke-width="2" stroke-dasharray="4 5" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="6" fill="#00ff6f"/>
+  <circle cx="32" cy="32" r="6" fill="none" stroke="#0b3d26" stroke-width="1.5"/>
+  <!-- the signal riding the inner orbit -->
+  <circle cx="45.2" cy="26.5" r="3.2" fill="#00bcff"/>
+</svg>
