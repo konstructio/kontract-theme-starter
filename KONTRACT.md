@@ -1,7 +1,7 @@
 # KONTRACT
 version: v2
 theme: starter
-capabilities: [apps, zones]
+capabilities: [apps, zones, quota, runtime-logs, app-events]
 vocabulary:
   zone: { singular: zone, plural: zones, verb: create }
   app: { singular: app, plural: apps, verb: ship }

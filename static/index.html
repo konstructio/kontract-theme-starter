@@ -98,6 +98,40 @@
   .url{font-family:var(--mono);font-size:11px}
   .err{color:var(--red);font-family:var(--mono);font-size:12px}
 
+  /* live dashboard */
+  .quota-row{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid rgba(56,69,79,.5);font-size:12px}
+  .quota-row:first-of-type{border-top:none}
+  .quota-row .ql{flex:0 0 68px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+  .quota-row .qv{flex:0 0 150px;text-align:right;font-family:var(--mono);font-size:11px;color:var(--ink2)}
+  .appsgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .appcard{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:13px 15px;cursor:pointer;display:flex;flex-direction:column;gap:8px;transition:border-color .12s}
+  .appcard:hover{border-color:var(--line2)}
+  .appcard.sel{border-color:rgba(0,255,111,.5)}
+  .appcard .top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .appcard .an{font-weight:700;font-size:13.5px;color:var(--ink)}
+  .appcard .meta{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;color:var(--mut2)}
+  .bdg{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;border-radius:3px;padding:2px 6px;font-weight:700}
+  .bdg.vol{color:var(--amber);border:1px solid rgba(253,199,63,.45)}
+  .bdg.dom-ok{color:var(--green);border:1px solid rgba(0,255,111,.45)}
+  .bdg.dom-wait{color:var(--amber);border:1px solid rgba(253,199,63,.45)}
+  .sparkrow{display:flex;gap:14px;align-items:center}
+  .sparkrow .sl{font-family:var(--mono);font-size:9px;color:var(--mut2);letter-spacing:.08em}
+  .sparkrow svg{background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:4px}
+  .charts3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+  .chart .chh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px}
+  .chart .chh .cl{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+  .chart .chh .cv{font-family:var(--mono);font-size:11.5px}
+  .chart svg{width:100%;height:88px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:5px}
+  .chart .chf{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;color:var(--mut2);margin-top:3px}
+  .logpane{height:300px;overflow:auto;display:flex;flex-direction:column-reverse;background:#0b0f12;border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+  .logpane pre{margin:0;font-family:var(--mono);font-size:11px;line-height:1.55;color:var(--mut);white-space:pre-wrap}
+  .loghead{display:flex;align-items:center;gap:10px;margin:14px 0 7px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+  .loghead .lv{color:var(--green)} .loghead .lv.off{color:var(--amber)}
+  .reconnect{font-family:var(--mono);font-size:10px;color:var(--blue);border:1px solid rgba(0,188,255,.4);background:none;border-radius:4px;padding:4px 9px;cursor:pointer}
+  .buildpre{max-height:220px;overflow:auto;background:#0b0f12;border:1px solid var(--line);border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:11px;line-height:1.55;color:var(--mut);white-space:pre-wrap;margin:0}
+  .closebtn{font-family:var(--mono);font-size:10px;color:var(--mut);border:1px solid var(--line2);background:none;border-radius:4px;padding:4px 9px;cursor:pointer;margin-left:auto}
+  .closebtn:hover{color:var(--ink)}
+
   /* steps */
   .steps{counter-reset:s}
   .step{display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--line)}
@@ -273,31 +307,223 @@
       <footer><span>Kontract Starter · the reference theme</span><span class="chip">informational</span><span>powered by</span><span class="chip">Konstruct</span></footer>`;
   }
 
-  async function renderLive(){
-    root.innerHTML = `<div class="live-banner"><span class="dot" style="width:8px;height:8px;border-radius:50%"></span>
-      Live — talking to <b style="color:var(--ink)">&nbsp;${esc(org)}&nbsp;</b> through the kontract. No credentials ever reached this page. <a href="${DOCS}" target="_blank" rel="noopener">&nbsp;What is this? →</a></div>
-      <div id="live">loading your organization…</div>`;
-    const live = document.getElementById("live");
+  // ── launched mode: a read-only live operations dashboard ─────────────────
+  // Everything below only READS: discover, quota, zones, apps, metrics,
+  // buildLogs, and the logs/appEvents streams. No mutations, by design.
+  const S = { caps: [], zones: [], apps: [], selected: null, logSub: null, logLines: [], logState: "connecting", evtSub: null, sparks: {}, booted: false };
+
+  const fmtCores = (v) => v >= 10 ? String(Math.round(v)) : v >= 1 ? v.toFixed(2) : v.toFixed(3);
+  const fmtMB = (v) => `${Math.round(v / 1048576)} MB`;
+  const fmtRate = (v) => v == null ? "—" : v >= 1048576 ? `${(v/1048576).toFixed(1)} MB/s` : v >= 1024 ? `${(v/1024).toFixed(1)} kB/s` : `${Math.round(v)} B/s`;
+  const fmtGi = (v) => String(v ?? "").replace(/Gi$/, " GB");
+  const pv = (pt) => parseFloat(Array.isArray(pt) ? pt[1] : (pt && typeof pt === "object" ? pt.v : pt));
+  const seriesVals = (m, name) => (((m && m.series) || []).find((x) => x.name === name)?.points || []).map(pv).filter((v) => !Number.isNaN(v));
+  const lastOf = (vals) => vals.length ? vals[vals.length - 1] : null;
+
+  // Zero-grounded polyline for a 600x88 viewBox, optional limit ceiling.
+  function chartPath(vals, limit, top){
+    const v = (vals || []).filter((x) => typeof x === "number" && !Number.isNaN(x));
+    if (v.length < 2) return null;
+    const t = (top || Math.max(...v, limit || 0)) || 1;
+    const step = 600 / (v.length - 1);
+    const y = (x) => (85 - (Math.min(x, t) / t) * 78).toFixed(1);
+    const pts = v.map((x, i) => `${(i * step).toFixed(1)},${y(x)}`).join(" ");
+    return { pts, area: `0,88 ${pts} 600,88`, limitY: limit ? y(limit) : null, last: v[v.length - 1], peak: Math.max(...v) };
+  }
+  const sparkPath = (vals, w, h) => {
+    const v = (vals || []).filter((x) => typeof x === "number" && !Number.isNaN(x));
+    if (v.length < 2) return "";
+    const min = Math.min(...v), span = (Math.max(...v) - min) || 1, step = w / (v.length - 1);
+    return v.map((x, i) => `${(i * step).toFixed(1)},${(h - 2 - ((x - min) / span) * (h - 4)).toFixed(1)}`).join(" ");
+  };
+
+  function quotaRows(q){
+    if (!q) return "";
+    const dims = [["cpu", "CPU", (v) => v], ["memory", "Memory", fmtGi], ["storage", "Storage", fmtGi]];
+    return dims.map(([k, label, f]) => {
+      const d = q[k] || {};
+      const used = parseFloat(String(d.used || "0").replace(/Gi$/, "")) || 0;
+      const lim = parseFloat(String(d.limit || "0").replace(/Gi$/, "")) || 0;
+      const pct = lim ? Math.min(100, (used / lim) * 100) : 0;
+      const fg = pct > 85 ? "var(--red)" : pct > 60 ? "var(--amber)" : "var(--green)";
+      return `<div class="quota-row"><span class="ql">${label}</span>
+        <span class="bar"><i style="width:${pct}%;background:${fg}"></i></span>
+        <span class="qv">${esc(f(d.used || "0"))} / ${d.limit ? esc(f(d.limit)) : "∞"}</span></div>`;
+    }).join("");
+  }
+
+  function appCard(a){
+    const name = a.name || a.app_name;
+    const ph = a.status?.phase || "—";
+    const url = typeof a.status?.url === "string" && a.status.url.startsWith("https://") ? a.status.url : "";
+    const sp = S.sparks[name] || {};
+    const cpuLast = lastOf(sp.cpu || []), memLast = lastOf(sp.mem || []);
+    return `<div class="appcard${S.selected === name ? " sel" : ""}" data-app="${esc(name)}">
+      <div class="top"><span class="st ${esc(ph)}"><span class="dot"></span>${esc(ph)}</span><span class="an">${esc(a.app_name || name)}</span>
+        ${a.environment ? `<span class="chip">${esc(a.environment)}</span>` : ""}
+        ${a.volume && a.volume.size ? `<span class="bdg vol" title="persistent volume at ${esc(a.volume.mount_path || "/data")}">▣ ${esc(fmtGi(a.volume.size))}</span>` : ""}
+        ${a.custom_domain ? `<span class="bdg ${a.status?.domain_verified ? "dom-ok" : "dom-wait"}">✦ ${esc(a.custom_domain)}${a.status?.domain_verified ? "" : " · verifying"}</span>` : ""}</div>
+      ${url ? `<a class="url" href="${esc(url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(url.replace("https://",""))}</a>` : '<span class="mono" style="color:var(--mut2);font-size:11px">no endpoint yet</span>'}
+      <div class="sparkrow">
+        <span class="sl">CPU</span><svg width="96" height="22" viewBox="0 0 96 22" preserveAspectRatio="none"><polyline points="${sparkPath(sp.cpu, 96, 22)}" fill="none" stroke="var(--green)" stroke-width="1.3"/></svg>
+        <span class="sl">MEM</span><svg width="96" height="22" viewBox="0 0 96 22" preserveAspectRatio="none"><polyline points="${sparkPath(sp.mem, 96, 22)}" fill="none" stroke="var(--blue)" stroke-width="1.3"/></svg>
+        <span class="sl" style="color:var(--mut)">${cpuLast != null ? `${fmtCores(cpuLast)} cores` : ""}${memLast != null ? ` · ${fmtMB(memLast)}` : ""}</span>
+      </div>
+      <div class="meta"><span>size ${esc(a.size || "—")}</span><span>× ${esc(a.replicas ?? 1)}</span><span>${esc(a.branch || "main")}</span>${a.status?.build_sha ? `<span>${esc(String(a.status.build_sha).slice(0, 8))}</span>` : ""}</div>
+    </div>`;
+  }
+
+  function chartBlock(id, label, color, valueText, footText){
+    return `<div class="chart"><div class="chh"><span class="cl">${label}</span><span class="cv" style="color:${color}">${esc(valueText)}</span></div>
+      <svg id="${id}" viewBox="0 0 600 88" preserveAspectRatio="none"></svg>
+      <div class="chf"><span>1h ago</span><span>${esc(footText)}</span><span>now</span></div></div>`;
+  }
+  function drawChart(id, c, color, fill, extra){
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!c) { el.innerHTML = `<text x="300" y="48" text-anchor="middle" fill="var(--mut2)" font-size="11" font-family="var(--mono)">no samples yet</text>`; return; }
+    let inner = `<polygon points="${c.area}" fill="${fill}"></polygon><polyline points="${c.pts}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>`;
+    if (c.limitY) inner += `<line x1="0" y1="${c.limitY}" x2="600" y2="${c.limitY}" stroke="var(--red)" stroke-width="1" stroke-dasharray="6,5" vector-effect="non-scaling-stroke"></line>`;
+    el.innerHTML = inner + (extra || "");
+  }
+
+  function closeLogs(){
+    if (S.logSub) { try { S.logSub(); } catch (e) {} }
+    S.logSub = null;
+  }
+  function openLogs(name){
+    closeLogs();
+    S.logLines = []; S.logState = "connecting";
+    if (!S.caps.includes("runtime-logs") || typeof kontract.logs !== "function") { S.logState = "unavailable"; paintLogs(); return; }
+    S.logSub = kontract.logs(org, name, (l) => {
+      const pod = l && l.pod ? `[${String(l.pod).slice(-12)}] ` : "◆ ";
+      const line = l && (l.line ?? l.message) != null ? String(l.line ?? l.message) : String(l);
+      S.logLines.push(pod + line);
+      if (S.logLines.length > 400) S.logLines.splice(0, S.logLines.length - 400);
+      S.logState = "live"; paintLogs();
+    }, () => { S.logSub = null; S.logState = "ended"; paintLogs(); });
+  }
+  function paintLogs(){
+    const pre = document.getElementById("logpre"), st = document.getElementById("logstate");
+    if (!pre) return;
+    pre.textContent = S.logLines.join("\n") || "… waiting for log lines";
+    if (st) {
+      st.textContent = S.logState === "live" ? "● live" : S.logState === "ended" ? "◼ stream ended" : S.logState === "unavailable" ? "not available on this install" : "connecting…";
+      st.className = "lv" + (S.logState === "live" ? "" : " off");
+    }
+    const rec = document.getElementById("logrec");
+    if (rec) rec.style.display = S.logState === "ended" ? "" : "none";
+  }
+
+  async function openDetail(name){
+    S.selected = name;
+    paintApps();
+    const a = S.apps.find((x) => (x.name || x.app_name) === name) || {};
+    const box = document.getElementById("detailP");
+    box.style.display = "";
+    box.innerHTML = `<h2 style="margin:0 0 4px;display:flex;align-items:center;gap:10px;font-size:13px">${esc(a.app_name || name)}
+        <span class="chip">${esc(a.environment || "")}</span><button class="closebtn" id="detclose">close ×</button></h2>
+      <div class="sub">read-only telemetry · repo ${esc(a.repo_name || "—")} @ ${esc(a.branch || "main")}</div>
+      <div class="charts3" id="charts">${chartBlock("ch-cpu", "CPU · cores", "var(--green)", "…", "")}${chartBlock("ch-mem", "Memory", "var(--blue)", "…", "")}${chartBlock("ch-net", "Network · rx/tx", "var(--amber)", "…", "")}</div>
+      <div class="loghead">runtime logs <span class="lv" id="logstate">connecting…</span><button class="reconnect" id="logrec" style="display:none">↻ reconnect</button></div>
+      <div class="logpane"><pre id="logpre">…</pre></div>
+      <div class="loghead">latest build</div>
+      <pre class="buildpre" id="buildpre">loading…</pre>`;
+    document.getElementById("detclose").onclick = () => { S.selected = null; closeLogs(); box.style.display = "none"; paintApps(); };
+    document.getElementById("logrec").onclick = () => openLogs(name);
+    openLogs(name);
+    kontract.buildLogs(org, name).then((bl) => {
+      const el = document.getElementById("buildpre");
+      if (el) el.textContent = ((bl && bl.logs) || "").split("\n").slice(-40).join("\n").trim() || "(no build output recorded)";
+    }).catch(() => {});
+    refreshDetailCharts(name);
+  }
+
+  async function refreshDetailCharts(name){
+    if (S.selected !== name) return;
     try {
-      const d = await kontract.discover(org);
-      const [zonesR, appsR] = await Promise.all([
+      const m = await kontract.metrics(org, name, { range: "1h", step: "60s" });
+      if (S.selected !== name) return;
+      const cpu = seriesVals(m, "cpu"), cpuLim = lastOf(seriesVals(m, "cpu_limit"));
+      const mem = seriesVals(m, "memory"), memLim = lastOf(seriesVals(m, "memory_limit"));
+      const rx = seriesVals(m, "network_rx"), tx = seriesVals(m, "network_tx");
+      const cC = chartPath(cpu, cpuLim), cM = chartPath(mem, memLim);
+      const netTop = Math.max(...rx, ...tx, 1);
+      const cRx = chartPath(rx, null, netTop), cTx = chartPath(tx, null, netTop);
+      drawChart("ch-cpu", cC, "var(--green)", "rgba(0,255,111,.08)");
+      drawChart("ch-mem", cM, "var(--blue)", "rgba(0,188,255,.08)");
+      drawChart("ch-net", cRx, "var(--amber)", "rgba(253,199,63,.08)", cTx ? `<polyline points="${cTx.pts}" fill="none" stroke="var(--blue)" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>` : "");
+      const set = (sel, txt) => { const e = document.querySelector(sel); if (e) e.textContent = txt; };
+      set("#charts .chart:nth-child(1) .cv", cC ? `${fmtCores(cC.last)} cores` : "—");
+      set("#charts .chart:nth-child(1) .chf span:nth-child(2)", cpuLim ? `limit ${fmtCores(cpuLim)}` : (cC ? `peak ${fmtCores(cC.peak)}` : ""));
+      set("#charts .chart:nth-child(2) .cv", cM ? fmtMB(cM.last) : "—");
+      set("#charts .chart:nth-child(2) .chf span:nth-child(2)", memLim ? `limit ${fmtMB(memLim)}` : (cM ? `peak ${fmtMB(cM.peak)}` : ""));
+      set("#charts .chart:nth-child(3) .cv", `rx ${fmtRate(lastOf(rx))} · tx ${fmtRate(lastOf(tx))}`);
+      set("#charts .chart:nth-child(3) .chf span:nth-child(2)", `peak rx ${fmtRate(cRx ? cRx.peak : null)} · tx ${fmtRate(cTx ? cTx.peak : null)}`);
+    } catch (e) {}
+  }
+
+  function paintApps(){
+    const el = document.getElementById("appsP");
+    if (!el) return;
+    el.innerHTML = S.apps.length
+      ? `<div class="appsgrid">${S.apps.map(appCard).join("")}</div>`
+      : '<div class="item mono" style="color:var(--mut)">No apps yet — ship one from Konduit or any interactive theme.</div>';
+    el.querySelectorAll(".appcard").forEach((c) => { c.onclick = () => openDetail(c.dataset.app); });
+  }
+
+  async function refreshSparks(){
+    for (const a of S.apps) {
+      const name = a.name || a.app_name;
+      if ((a.status?.phase) !== "Live" && (a.status?.phase) !== "Failed") continue;
+      try {
+        const m = await kontract.metrics(org, name, { range: "1h", step: "2m" });
+        S.sparks[name] = { cpu: seriesVals(m, "cpu"), mem: seriesVals(m, "memory") };
+      } catch (e) {}
+    }
+    paintApps();
+  }
+
+  async function refreshData(){
+    try {
+      const [zonesR, appsR, quotaR] = await Promise.all([
         kontract.zones(org).catch(() => []),
         kontract.apps(org).catch(() => []),
+        S.caps.includes("quota") ? kontract.quota(org).catch(() => null) : Promise.resolve(null),
       ]);
-      const zoneList = Array.isArray(zonesR) ? zonesR : (zonesR.zones || []);
-      const appList  = Array.isArray(appsR)  ? appsR  : (appsR.apps  || []);
-      live.innerHTML = `
-        <div class="panel"><h2>Organization</h2>
-          <div class="item"><b>${esc(d.org?.display_name || org)}</b>
-            ${(d.capabilities||[]).map(c => `<span class="chip">${esc(c)}</span>`).join("")}</div></div>
-        <div class="panel"><h2>Zones</h2>${zoneList.map(zoneRow).join("") || '<div class="item mono" style="color:var(--mut)">No zones yet — claim capacity from Konstruct.</div>'}</div>
-        <div class="panel"><h2>Applications</h2>${appList.map(appRow).join("") || '<div class="item mono" style="color:var(--mut)">No apps yet — ship one from a connected repo.</div>'}</div>
-        <div class="panel" style="border-left:2px solid var(--green)"><h2>This is the starter</h2>
-          <div class="sub">You're seeing real data rendered by the reference theme. Fork it, replace the UI, keep <code style="font-family:var(--mono);color:var(--green)">kontract.js</code>, and push — Konstruct rebuilds it for you.</div>
-          <div class="item" style="border-top:none;gap:16px"><a href="${DOCS}/creating-a-theme" target="_blank" rel="noopener">Creating a theme →</a><a href="${DOCS}/theme-spec" target="_blank" rel="noopener">Theme spec →</a><a href="${DOCS}/kontract" target="_blank" rel="noopener">The kontract →</a></div></div>`;
+      S.zones = Array.isArray(zonesR) ? zonesR : (zonesR.zones || []);
+      S.apps = Array.isArray(appsR) ? appsR : (appsR.apps || []);
+      const zEl = document.getElementById("zonesP");
+      if (zEl) zEl.innerHTML = S.zones.map(zoneRow).join("") || '<div class="item mono" style="color:var(--mut)">No zones yet.</div>';
+      const qEl = document.getElementById("quotaP");
+      if (qEl && quotaR) qEl.innerHTML = `<div class="grp" style="padding-top:0">Org allowance${quotaR.plan ? ` · ${esc(quotaR.plan)} plan` : ""}</div>` + quotaRows(quotaR);
+      paintApps();
+    } catch (e) {}
+  }
+
+  async function renderLive(){
+    root.innerHTML = `<div class="live-banner"><span class="dot" style="width:8px;height:8px;border-radius:50%"></span>
+      Live — a read-only operations view of <b style="color:var(--ink)">&nbsp;${esc(org)}&nbsp;</b>, rendered entirely through the kontract. <a href="${DOCS}" target="_blank" rel="noopener">&nbsp;What is this? →</a></div>
+      <div class="panel"><h2 id="orgH">Organization</h2><div id="quotaP"></div></div>
+      <div class="panel"><h2>Zones</h2><div id="zonesP">loading…</div></div>
+      <div class="panel"><h2>Applications <span class="sub" style="margin:0;font-weight:400">· click one for live telemetry</span></h2><div id="appsP">loading…</div></div>
+      <div class="panel" id="detailP" style="display:none"></div>
+      <div class="panel" style="border-left:2px solid var(--green)"><h2>This is the starter</h2>
+        <div class="sub">A fully hydrated, read-only reference: quota, zones, apps, per-app metrics history, live runtime logs, and build output — all through <code style="font-family:var(--mono);color:var(--green)">kontract.js</code>. Fork it and make it yours.</div>
+        <div class="item" style="border-top:none;gap:16px"><a href="${DOCS}/creating-a-theme" target="_blank" rel="noopener">Creating a theme →</a><a href="${DOCS}/theme-spec" target="_blank" rel="noopener">Theme spec →</a><a href="${DOCS}/kontract" target="_blank" rel="noopener">The kontract →</a></div></div>`;
+    try {
+      const d = await kontract.discover(org);
+      S.caps = d.capabilities || [];
+      const h = document.getElementById("orgH");
+      if (h) h.innerHTML = `${esc(d.org?.display_name || org)} ${S.caps.map((c) => `<span class="chip">${esc(c)}</span>`).join(" ")}`;
+      await refreshData();
+      refreshSparks();
+      // Push-driven refresh when the platform supports it; poll fallback.
+      if (S.caps.includes("app-events") && typeof kontract.appEvents === "function") {
+        S.evtSub = kontract.appEvents(org, () => refreshData(), () => { S.evtSub = null; });
+      }
     } catch (e) {
-      live.innerHTML = `<div class="panel"><h2>Couldn't load your org</h2><div class="err">${esc(e && e.message || e)}</div>
-        <div class="sub" style="margin-top:10px">The launcher passes <code style="font-family:var(--mono);color:var(--green)">?org=&lt;namespace&gt;</code>; the broker pins every call to it. <a href="${DOCS}/kontract" target="_blank" rel="noopener">Contract docs →</a></div></div>`;
+      root.innerHTML += `<div class="panel"><h2>Couldn't load your org</h2><div class="err">${esc(e && e.message || e)}</div></div>`;
     }
   }
 
@@ -306,8 +532,10 @@
     renderLive();
   }
   render();
-  // Refresh the live view periodically; the welcome guide is static.
-  setInterval(() => { if (kontract.isLaunched()) renderLive(); }, 15000);
+  // Steady refresh: data every 15s (skipped when push events are flowing),
+  // sparklines + open detail charts every 30s. The welcome guide is static.
+  setInterval(() => { if (kontract.isLaunched() && !S.evtSub) refreshData(); }, 15000);
+  setInterval(() => { if (kontract.isLaunched()) { refreshSparks(); if (S.selected) refreshDetailCharts(S.selected); } }, 30000);
 </script>
 </body>
 </html>
