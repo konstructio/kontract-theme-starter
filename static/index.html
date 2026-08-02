@@ -149,6 +149,38 @@
   .doclink .dt{font-weight:700;color:var(--ink);font-size:13px}
   .doclink .dd{font-size:12px;color:var(--mut)}
 
+  /* fleet strip */
+  .fleet{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 15px}
+  .stat .kv{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.2}
+  .stat .kv b{color:var(--green);font-weight:700}
+  .stat .kl{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--mut);font-weight:700;margin-top:3px}
+  .stat .ks{font-family:var(--mono);font-size:10px;color:var(--mut2);margin-top:2px}
+  /* zone group headers */
+  .zonehead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+  .zonehead:first-child{border-top:none;margin-top:4px;padding-top:0}
+  .zonehead .zn{font-weight:700;font-size:14px;color:var(--ink)}
+  .zonehead .zsub{font-family:var(--mono);font-size:10.5px;color:var(--mut2)}
+  .zonehead .spacer{flex:1}
+  .zchip{font-family:var(--mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;border-radius:3px;padding:2px 7px;font-weight:700}
+  .zchip.free{color:var(--blue);border:1px solid rgba(0,188,255,.4)}
+  .zchip.paid{color:var(--amber);border:1px solid rgba(253,199,63,.4)}
+  .zchip.off{color:var(--red);border:1px solid rgba(251,44,55,.45)}
+  /* deployment timeline */
+  .tl{margin-top:4px}
+  .tlrow{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-top:1px solid rgba(56,69,79,.5);font-size:12.5px;flex-wrap:wrap}
+  .tlrow:first-child{border-top:none}
+  .tlrow .tn{font-family:var(--mono);font-size:11px;color:var(--ink2);font-weight:700;flex:0 0 74px}
+  .tlrow .trv{font-family:var(--mono);font-size:11px;color:var(--mut2)}
+  .tlrow .trr{color:var(--ink2)}
+  .tlrow .trd{font-family:var(--mono);font-size:10.5px;color:var(--mut2);margin-left:auto;font-variant-numeric:tabular-nums}
+  /* size + rate chips */
+  .refline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:10.5px;color:var(--mut2);padding-top:10px}
+  .refline .rk{border:1px solid var(--line2);border-radius:4px;padding:2px 8px;color:var(--mut)}
+  .refline .rk b{color:var(--ink2);font-weight:700}
+  .statrow{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--mut);margin:2px 0 12px}
+  .statrow b{color:var(--ink2);font-weight:700}
+  .failmsg{font-family:var(--mono);font-size:11px;color:var(--red);white-space:pre-wrap}
   footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;color:var(--mut2);font-size:12px;flex-wrap:wrap}
   .live-banner{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid rgba(0,255,111,.3);border-radius:8px;padding:11px 15px;margin:18px 0 6px;font-size:13px;color:var(--ink2)}
   .live-banner .dot{background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
@@ -181,22 +213,6 @@
   // "8500m" is millicores; "24" is cores. Quota and zone figures mix both.
   const cores = (v) => { const t = String(v ?? "0").trim(); const n = parseFloat(t); return isFinite(n) ? (/m$/.test(t) ? n / 1000 : n) : 0; };
 
-  function zoneRow(z){
-    // Zones are logical environments with no capacity of their own — the
-    // org-wide quota is the only gate. Show the zone's draw, not a ceiling.
-    const used = cores(z.status?.allocated_cpu);
-    return `<div class="item"><b>${esc(z.name)}</b>
-      
-      <span style="flex:1"></span>
-      <span class="mono" style="color:var(--mut)">${used ? `${used} cpu drawn · ` : ""}${esc(z.status?.apps ?? 0)} apps</span></div>`;
-  }
-  function appRow(a){
-    const ph = a.status?.phase || "—";
-    const url = typeof a.status?.url === "string" && a.status.url.startsWith("https://") ? a.status.url : "";
-    return `<div class="item"><span class="st ${esc(ph)}"><span class="dot"></span>${esc(ph)}</span>
-      <b>${esc(a.app_name || a.name)}</b>
-      ${url ? `<a class="url" href="${esc(url)}" target="_blank" rel="noopener">${esc(url.replace("https://",""))}</a>` : '<span class="mono" style="color:var(--mut2)">no endpoint yet</span>'}</div>`;
-  }
 
 
   // ---- capability + profile content (kept in sync with kontract.js) ----
@@ -208,6 +224,8 @@
       ["metrics","cpu, memory, network and limit-ceiling time-series per app"],
       ["quota","the org-wide allowance meter — cpu, memory, storage used vs limit"],
       ["buildLogs","the latest build's log output"],
+      ["deployments","the app's real build history — number, reason, revision, duration"],
+      ["regions","the managed workload clusters apps can target"],
     ]},
     { title:"Live streams", badge:"push", cls:"read", ops:[
       ["logs","live runtime log lines pushed from the app's pods (subscribe/unsubscribe)"],
@@ -301,7 +319,8 @@
   // ── launched mode: a read-only live operations dashboard ─────────────────
   // Everything below only READS: discover, quota, zones, apps, metrics,
   // buildLogs, and the logs/appEvents streams. No mutations, by design.
-  const S = { caps: [], zones: [], apps: [], selected: null, logSub: null, logLines: [], logState: "connecting", evtSub: null, sparks: {}, booted: false };
+  const S = { caps: [], zones: [], apps: [], sizes: [], rates: {}, regions: [], quota: null, character: null,
+    selected: null, logSub: null, logLines: [], logState: "connecting", evtSub: null, sparks: {}, deployments: {}, booted: false };
 
   const fmtCores = (v) => v >= 10 ? String(Math.round(v)) : v >= 1 ? v.toFixed(2) : v.toFixed(3);
   const fmtMB = (v) => `${Math.round(v / 1048576)} MB`;
@@ -310,6 +329,29 @@
   const pv = (pt) => parseFloat(Array.isArray(pt) ? pt[1] : (pt && typeof pt === "object" ? pt.v : pt));
   const seriesVals = (m, name) => (((m && m.series) || []).find((x) => x.name === name)?.points || []).map(pv).filter((v) => !Number.isNaN(v));
   const lastOf = (vals) => vals.length ? vals[vals.length - 1] : null;
+  const relTime = (iso) => {
+    const t = Date.parse(iso || ""); if (!t) return "";
+    const m = Math.round((Date.now() - t) / 60000);
+    return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
+  };
+  const durBetween = (a, b) => {
+    const x = Date.parse(a || ""), y = Date.parse(b || ""); if (!x || !y) return "";
+    const sec = Math.round((y - x) / 1000);
+    return sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`;
+  };
+  // resolve a plan size key ("s") to its real resources from discover()
+  const sizeLabel = (key) => {
+    const z = S.sizes.find((x) => x.key === key);
+    return z ? `${esc(key)} · ${esc(z.cpu)} cpu · ${esc(fmtGi(z.memory))}` : esc(key || "—");
+  };
+  const reasonHuman = (d, branch) => {
+    const r = String(d.reason || "").toUpperCase();
+    if (r.includes("COMMIT")) return `push to ${branch || "main"}`;
+    if (r.includes("TRIGGER")) return "manual relaunch";
+    if (r.includes("CONFIG")) return "config change";
+    if (r.includes("STACK") || r.includes("BUILDPACK")) return "platform stack refresh";
+    return r ? r.toLowerCase() : "build";
+  };
 
   // Zero-grounded polyline for a 600x88 viewBox, optional limit ceiling.
   function chartPath(vals, limit, top){
@@ -360,7 +402,8 @@
         <span class="sl">MEM</span><svg width="96" height="22" viewBox="0 0 96 22" preserveAspectRatio="none"><polyline points="${sparkPath(sp.mem, 96, 22)}" fill="none" stroke="var(--blue)" stroke-width="1.3"/></svg>
         <span class="sl" style="color:var(--mut)">${cpuLast != null ? `${fmtCores(cpuLast)} cores` : ""}${memLast != null ? ` · ${fmtMB(memLast)}` : ""}</span>
       </div>
-      <div class="meta"><span>size ${esc(a.size || "—")}</span><span>× ${esc(a.replicas ?? 1)}</span><span>${esc(a.branch || "main")}</span>${a.status?.build_sha ? `<span>${esc(String(a.status.build_sha).slice(0, 8))}</span>` : ""}</div>
+      <div class="meta"><span>${sizeLabel(a.size)}</span><span>× ${esc(a.replicas ?? 1)}</span><span>${esc(a.branch || "main")}</span>${a.port ? `<span>:${esc(a.port)}</span>` : ""}${a.sub_path ? `<span>/${esc(a.sub_path)}</span>` : ""}${Array.isArray(a.env) && a.env.length ? `<span>${a.env.length} env var${a.env.length > 1 ? "s" : ""}</span>` : ""}${a.public_url_enabled === false ? `<span style="color:var(--amber)">internal only</span>` : ""}${a.region ? `<span>${esc(a.region)}</span>` : ""}</div>
+      ${ph === "Failed" && a.status?.message ? `<div class="failmsg">${esc(String(a.status.message).slice(0, 200))}</div>` : ""}
     </div>`;
   }
 
@@ -415,10 +458,22 @@
     box.innerHTML = `<h2 style="margin:0 0 4px;display:flex;align-items:center;gap:10px;font-size:13px">${esc(a.app_name || name)}
         <span class="chip">${esc(a.environment || "")}</span><button class="closebtn" id="detclose">close ×</button></h2>
       <div class="sub">read-only telemetry · repo ${esc(a.repo_name || "—")} @ ${esc(a.branch || "main")}</div>
-      <div class="charts3" id="charts">${chartBlock("ch-cpu", "CPU · cores", "var(--green)", "…", "")}${chartBlock("ch-mem", "Memory", "var(--blue)", "…", "")}${chartBlock("ch-net", "Network · rx/tx", "var(--amber)", "…", "")}</div>
+      <div class="statrow">
+        <span>size <b>${sizeLabel(a.size)}</b></span><span>replicas <b>${esc(a.replicas ?? 1)}</b></span>
+        ${a.port ? `<span>port <b>${esc(a.port)}</b></span>` : ""}
+        ${a.sub_path ? `<span>sub path <b>/${esc(a.sub_path)}</b></span>` : ""}
+        ${a.region ? `<span>region <b>${esc(a.region)}</b></span>` : ""}
+        <span>reachability <b>${a.public_url_enabled === false ? "internal only" : "public URL"}</b></span>
+        ${Array.isArray(a.env) && a.env.length ? `<span>env vars <b>${a.env.length}</b></span>` : ""}
+        ${a.status?.image ? `<span>image <b>${esc(String(a.status.image).split("@").pop().slice(0, 15))}</b></span>` : ""}
+        <span id="podstat"></span>
+      </div>
+      <div class="charts3" id="charts">${chartBlock("ch-cpu", "CPU · cores", "var(--green)", "…", "")}${chartBlock("ch-mem", "Memory", "var(--blue)", "…", "")}${chartBlock("ch-net", "Network · rx/tx", "var(--amber)", "…", "")}${chartBlock("ch-pods", "Pods · restarts", "var(--ink2)", "…", "")}</div>
+      <div class="loghead">deployment history</div>
+      <div class="tl" id="deployTl"><div class="item mono" style="color:var(--mut2);border-top:none">loading…</div></div>
       <div class="loghead">runtime logs <span class="lv" id="logstate">connecting…</span><button class="reconnect" id="logrec" style="display:none">↻ reconnect</button></div>
       <div class="logpane"><pre id="logpre">…</pre></div>
-      <div class="loghead">latest build</div>
+      <div class="loghead">latest build output</div>
       <pre class="buildpre" id="buildpre">loading…</pre>`;
     document.getElementById("detclose").onclick = () => { S.selected = null; closeLogs(); box.style.display = "none"; paintApps(); };
     document.getElementById("logrec").onclick = () => openLogs(name);
@@ -427,7 +482,32 @@
       const el = document.getElementById("buildpre");
       if (el) el.textContent = ((bl && bl.logs) || "").split("\n").slice(-40).join("\n").trim() || "(no build output recorded)";
     }).catch(() => {});
+    paintDeployments(name, a.branch);
     refreshDetailCharts(name);
+  }
+
+  // real build history through the contract — render it or nothing, never invent
+  function paintDeployments(name, branch){
+    const el = document.getElementById("deployTl");
+    if (!el) return;
+    if (typeof kontract.deployments !== "function") { el.innerHTML = '<div class="item mono" style="color:var(--mut2);border-top:none">not available on this install</div>'; return; }
+    kontract.deployments(org, name).then((list) => {
+      const box = document.getElementById("deployTl");
+      if (!box || S.selected !== name) return;
+      const rows = (Array.isArray(list) ? list : []).map((d) => {
+        const ph = d.phase || "Building";
+        return `<div class="tlrow"><span class="st ${esc(ph === "Succeeded" ? "Live" : ph)}" style="flex:0 0 16px"><span class="dot"></span></span>
+          <span class="tn">BUILD #${esc(d.build ?? "?")}</span>
+          <span class="trr">${esc(reasonHuman(d, branch))}</span>
+          ${d.revision ? `<span class="trv">${esc(String(d.revision).slice(0, 8))}</span>` : ""}
+          ${ph === "Failed" ? `<span class="trv" style="color:var(--red)">failed</span>` : ph !== "Succeeded" ? `<span class="trv" style="color:var(--blue)">building…</span>` : ""}
+          <span class="trd">${esc(durBetween(d.started_at, d.finished_at))}${d.started_at ? ` · ${esc(relTime(d.started_at))}` : ""}</span></div>`;
+      }).join("");
+      box.innerHTML = rows || '<div class="item mono" style="color:var(--mut2);border-top:none">no builds recorded yet</div>';
+    }).catch(() => {
+      const box = document.getElementById("deployTl");
+      if (box) box.innerHTML = '<div class="item mono" style="color:var(--mut2);border-top:none">history unavailable</div>';
+    });
   }
 
   async function refreshDetailCharts(name){
@@ -451,15 +531,55 @@
       set("#charts .chart:nth-child(2) .chf span:nth-child(2)", memLim ? `limit ${fmtMB(memLim)}` : (cM ? `peak ${fmtMB(cM.peak)}` : ""));
       set("#charts .chart:nth-child(3) .cv", `rx ${fmtRate(lastOf(rx))} · tx ${fmtRate(lastOf(tx))}`);
       set("#charts .chart:nth-child(3) .chf span:nth-child(2)", `peak rx ${fmtRate(cRx ? cRx.peak : null)} · tx ${fmtRate(cTx ? cTx.peak : null)}`);
+      const pods = seriesVals(m, "pods"), restarts = seriesVals(m, "restarts");
+      const podTop = Math.max(...pods, ...restarts, 1);
+      const cP = chartPath(pods, null, podTop), cR = chartPath(restarts, null, podTop);
+      drawChart("ch-pods", cP, "var(--ink2)", "rgba(199,206,211,.06)", cR ? `<polyline points="${cR.pts}" fill="none" stroke="var(--red)" stroke-width="1.6" vector-effect="non-scaling-stroke"></polyline>` : "");
+      const rNow = lastOf(restarts), rStart = restarts.length ? restarts[0] : null;
+      const newRestarts = rNow != null && rStart != null ? Math.max(0, rNow - rStart) : null;
+      set("#charts .chart:nth-child(4) .cv", cP ? `${Math.round(cP.last)} pod${Math.round(cP.last) === 1 ? "" : "s"}${rNow != null ? ` · ${Math.round(rNow)} restarts` : ""}` : "—");
+      set("#charts .chart:nth-child(4) .chf span:nth-child(2)", newRestarts != null ? (newRestarts > 0 ? `⚠ ${newRestarts} restart${newRestarts === 1 ? "" : "s"} this hour` : "no restarts this hour") : "");
+      const pe = document.getElementById("podstat");
+      if (pe && newRestarts != null && newRestarts > 0) pe.innerHTML = `<span style="color:var(--red)">⚠ ${newRestarts} restart${newRestarts === 1 ? "" : "s"} in the last hour</span>`;
     } catch (e) {}
   }
 
+  // apps are organized the way the platform organizes them: by environment.
+  // Zone metadata (display name, free/enabled, phase, draw) heads each group;
+  // platform-delivered themes have no environment and get an honest label.
+  function zoneHead(z, groupApps){
+    const draw = cores(z.status?.allocated_cpu);
+    return `<div class="zonehead"><span class="zn">${esc(z.display_name || z.name)}</span>
+      ${z.display_name && z.display_name !== z.name ? `<span class="zsub">${esc(z.name)}</span>` : ""}
+      ${z.free != null ? `<span class="zchip ${z.free ? "free" : "paid"}">${z.free ? "free" : "paid"}</span>` : ""}
+      ${z.enabled === false ? `<span class="zchip off">disabled</span>` : ""}
+      ${z.status?.phase && z.status.phase !== "Live" ? `<span class="zchip off">${esc(z.status.phase)}</span>` : ""}
+      <span class="spacer"></span>
+      <span class="zsub">${draw ? `${draw} cpu drawn · ` : ""}${groupApps.length} app${groupApps.length === 1 ? "" : "s"}</span></div>`;
+  }
   function paintApps(){
     const el = document.getElementById("appsP");
     if (!el) return;
-    el.innerHTML = S.apps.length
-      ? `<div class="appsgrid">${S.apps.map(appCard).join("")}</div>`
-      : '<div class="item mono" style="color:var(--mut)">No apps yet — ship one from Konduit or any interactive theme.</div>';
+    if (!S.apps.length) {
+      el.innerHTML = '<div class="item mono" style="color:var(--mut)">No apps yet — ship one from Konduit or any interactive theme.</div>';
+      return;
+    }
+    const zoneOf = (a) => a.zone_ref || a.environment || "";
+    let html = "";
+    for (const z of S.zones) {
+      const group = S.apps.filter((a) => zoneOf(a) === z.name);
+      html += zoneHead(z, group);
+      html += group.length
+        ? `<div class="appsgrid">${group.map(appCard).join("")}</div>`
+        : '<div class="item mono" style="color:var(--mut2);border-top:none;font-size:12px">nothing shipped here yet</div>';
+    }
+    const zoneNames = new Set(S.zones.map((z) => z.name));
+    const unzoned = S.apps.filter((a) => !zoneNames.has(zoneOf(a)));
+    if (unzoned.length) {
+      html += `<div class="zonehead"><span class="zn">Platform deliveries</span><span class="zsub">no environment — themes and platform-managed apps</span><span class="spacer"></span><span class="zsub">${unzoned.length} app${unzoned.length === 1 ? "" : "s"}</span></div>`;
+      html += `<div class="appsgrid">${unzoned.map(appCard).join("")}</div>`;
+    }
+    el.innerHTML = html;
     el.querySelectorAll(".appcard").forEach((c) => { c.onclick = () => openDetail(c.dataset.app); });
   }
 
@@ -473,8 +593,42 @@
       } catch (e) {}
     }
     paintApps();
+    paintFleet();
   }
 
+  // fleet strip: the summary an operator wants before any detail
+  function paintFleet(){
+    const el = document.getElementById("fleetP");
+    if (!el) return;
+    const ph = (p) => S.apps.filter((a) => a.status?.phase === p).length;
+    const live = ph("Live"), failed = ph("Failed");
+    const building = S.apps.length - live - failed;
+    const replicas = S.apps.reduce((t, a) => t + (a.replicas || 1), 0);
+    const cpuNow = Object.values(S.sparks).reduce((t, sp) => t + (lastOf(sp.cpu || []) || 0), 0);
+    const memNow = Object.values(S.sparks).reduce((t, sp) => t + (lastOf(sp.mem || []) || 0), 0);
+    el.innerHTML = `
+      <div class="stat"><div class="kv"><b>${live}</b> / ${S.apps.length}</div><div class="kl">apps live</div>
+        <div class="ks">${failed ? `<span style="color:var(--red)">${failed} failed</span>` : building ? `${building} building` : "all healthy"}</div></div>
+      <div class="stat"><div class="kv">${replicas}</div><div class="kl">replicas running</div><div class="ks">${S.zones.length} environment${S.zones.length === 1 ? "" : "s"}</div></div>
+      <div class="stat"><div class="kv">${cpuNow ? fmtCores(cpuNow) : "—"}</div><div class="kl">cores in use now</div><div class="ks">${memNow ? fmtMB(memNow) + " memory" : "measured across live apps"}</div></div>
+      <div class="stat"><div class="kv">${S.regions.length ? esc(S.regions.map((r) => r.name).join(", ")) : "—"}</div><div class="kl">region${S.regions.length === 1 ? "" : "s"}</div><div class="ks">workload cluster${S.regions.length === 1 ? "" : "s"} apps can target</div></div>`;
+  }
+  // plan reference: entitled sizes and metered rates, straight from discover()
+  function paintRef(d){
+    const el = document.getElementById("refP");
+    if (!el) return;
+    let html = "";
+    if (S.sizes.length) {
+      html += `<div class="grp">Entitled app sizes</div><div class="refline">` +
+        S.sizes.map((z) => `<span class="rk"><b>${esc(z.key)}</b> ${esc(z.cpu)} cpu · ${esc(fmtGi(z.memory))}</span>`).join("") + `</div>`;
+    }
+    const rates = Object.entries(S.rates || {});
+    if (rates.length) {
+      html += `<div class="grp">Metered rates</div><div class="refline">` +
+        rates.map(([k, v]) => `<span class="rk"><b>${esc(k.replace(/_/g, " "))}</b> ${esc(v)}</span>`).join("") + `</div>`;
+    }
+    el.innerHTML = html;
+  }
   async function refreshData(){
     try {
       const [zonesR, appsR, quotaR] = await Promise.all([
@@ -484,10 +638,10 @@
       ]);
       S.zones = Array.isArray(zonesR) ? zonesR : (zonesR.zones || []);
       S.apps = Array.isArray(appsR) ? appsR : (appsR.apps || []);
-      const zEl = document.getElementById("zonesP");
-      if (zEl) zEl.innerHTML = S.zones.map(zoneRow).join("") || '<div class="item mono" style="color:var(--mut)">No zones yet.</div>';
+      S.quota = quotaR;
       const qEl = document.getElementById("quotaP");
-      if (qEl && quotaR) qEl.innerHTML = `<div class="grp" style="padding-top:0">Org allowance${quotaR.plan ? ` · ${esc(quotaR.plan)} plan` : ""}</div>` + quotaRows(quotaR);
+      if (qEl && quotaR) qEl.innerHTML = `<div class="grp" style="padding-top:0">Org allowance${quotaR.plan ? ` · ${esc(quotaR.plan)} plan` : ""}${quotaR.capped ? ` · <span style="color:var(--amber)">hard-capped</span>` : ""}</div>` + quotaRows(quotaR);
+      paintFleet();
       paintApps();
     } catch (e) {}
   }
@@ -495,13 +649,14 @@
   async function renderLive(){
     root.innerHTML = `<div class="live-banner"><span class="dot" style="width:8px;height:8px;border-radius:50%"></span>
       Live — a read-only operations view of <b style="color:var(--ink)">&nbsp;${esc(org)}&nbsp;</b>, rendered entirely through the kontract. <a href="${DOCS}" target="_blank" rel="noopener">&nbsp;What is this? →</a></div>
-      <div class="panel"><h2 id="orgH">Organization</h2><div class="sub" id="capsLine" style="display:none"></div><div id="quotaP"></div></div>
-      <div class="panel"><h2>Zones</h2><div id="zonesP">loading…</div></div>
-      <div class="panel"><h2>Applications <span class="sub" style="margin:0;font-weight:400">· click one for live telemetry</span></h2><div id="appsP">loading…</div></div>
+      <div class="fleet" id="fleetP"></div>
+      <div class="panel"><h2 id="orgH">Organization</h2><div class="sub" id="capsLine" style="display:none"></div><div id="quotaP"></div><div id="refP"></div></div>
+      <div class="panel"><h2>Environments &amp; applications <span class="sub" style="margin:0;font-weight:400">· click an app for live telemetry &amp; history</span></h2><div id="appsP">loading…</div></div>
       <div class="panel" id="detailP" style="display:none"></div>
       <div class="panel" style="border-left:2px solid var(--green)"><h2>This is the starter</h2>
-        <div class="sub">A fully hydrated, read-only reference: quota, zones, apps, per-app metrics history, live runtime logs, and build output — all through <code style="font-family:var(--mono);color:var(--green)">kontract.js</code>. Fork it and make it yours.</div>
-        <div class="item" style="border-top:none;gap:16px"><a href="${DOCS}/creating-a-theme" target="_blank" rel="noopener">Creating a theme →</a><a href="${DOCS}/theme-spec" target="_blank" rel="noopener">Theme spec →</a><a href="${DOCS}/kontract" target="_blank" rel="noopener">The kontract →</a></div></div>`;
+        <div class="sub">A fully hydrated, read-only reference: quota, environments, apps, real deployment history, per-app metrics with limit ceilings, pods &amp; restarts, live runtime logs, and build output — every read the kontract offers, nothing invented. Fork it and make it yours.</div>
+        <div class="item" style="border-top:none;gap:16px"><a href="${DOCS}/creating-a-theme" target="_blank" rel="noopener">Creating a theme →</a><a href="${DOCS}/theme-spec" target="_blank" rel="noopener">Theme spec →</a><a href="${DOCS}/kontract" target="_blank" rel="noopener">The kontract →</a></div></div>
+      <footer><span>Kontract Starter · the reference theme</span><span class="chip">informational</span></footer>`;
     try {
       const d = await kontract.discover(org);
       S.caps = d.capabilities || [];
@@ -526,6 +681,22 @@
         cl.innerHTML = `this install advertises via <code style="font-family:var(--mono)">discover()</code>: ` +
           S.caps.map((c) => `<span class="chip" title="${esc(CAP_HINTS[c] || c)}">${esc(c)}</span>`).join(" ") +
           ` <span style="opacity:.7">— hover a capability; themes gate features on these flags</span>`;
+      }
+      S.sizes = d.app_sizes || [];
+      S.rates = d.rates || {};
+      paintRef(d);
+      if (typeof kontract.regions === "function") {
+        kontract.regions(org).then((r) => { S.regions = Array.isArray(r) ? r : []; paintFleet(); }).catch(() => {});
+      }
+      // the signed-in user's cross-theme progression ledger — read-only, and a
+      // live demonstration of the character op every theme shares
+      if (S.caps.includes("character") && typeof kontract.character === "function") {
+        kontract.character(org).then((c) => {
+          if (!c || (!c.level && !(c.inventory || []).length && !(c.quests || []).length)) return;
+          const f = document.querySelector("footer");
+          if (f) f.insertAdjacentHTML("afterbegin",
+            `<span class="mono" title="kontract.character() — the progression ledger shared by every theme in this org">your character: ${c.display_name ? esc(c.display_name) + " · " : ""}${c.level ? `LV ${esc(c.level)} · ` : ""}${c.xp ? `${esc(c.xp)} XP · ` : ""}${(c.inventory || []).length} item${(c.inventory || []).length === 1 ? "" : "s"} · ${(c.quests || []).length} quest${(c.quests || []).length === 1 ? "" : "s"} done</span>`);
+        }).catch(() => {});
       }
       await refreshData();
       refreshSparks();
