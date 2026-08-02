@@ -163,8 +163,6 @@
   .zonehead .zsub{font-family:var(--mono);font-size:10.5px;color:var(--mut2)}
   .zonehead .spacer{flex:1}
   .zchip{font-family:var(--mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;border-radius:3px;padding:2px 7px;font-weight:700}
-  .zchip.free{color:var(--blue);border:1px solid rgba(0,188,255,.4)}
-  .zchip.paid{color:var(--amber);border:1px solid rgba(253,199,63,.4)}
   .zchip.off{color:var(--red);border:1px solid rgba(251,44,55,.45)}
   /* deployment timeline */
   .tl{margin-top:4px}
@@ -551,7 +549,6 @@
     const draw = cores(z.status?.allocated_cpu);
     return `<div class="zonehead"><span class="zn">${esc(z.display_name || z.name)}</span>
       ${z.display_name && z.display_name !== z.name ? `<span class="zsub">${esc(z.name)}</span>` : ""}
-      ${z.free != null ? `<span class="zchip ${z.free ? "free" : "paid"}">${z.free ? "free" : "paid"}</span>` : ""}
       ${z.enabled === false ? `<span class="zchip off">disabled</span>` : ""}
       ${z.status?.phase && z.status.phase !== "Live" ? `<span class="zchip off">${esc(z.status.phase)}</span>` : ""}
       <span class="spacer"></span>
