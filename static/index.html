@@ -467,11 +467,12 @@
         <span id="podstat"></span>
       </div>
       <div class="charts3" id="charts">${chartBlock("ch-cpu", "CPU · cores", "var(--green)", "…", "")}${chartBlock("ch-mem", "Memory", "var(--blue)", "…", "")}${chartBlock("ch-net", "Network · rx/tx", "var(--amber)", "…", "")}${chartBlock("ch-pods", "Pods · restarts", "var(--ink2)", "…", "")}</div>
-      <div class="loghead">deployment history</div>
-      <div class="tl" id="deployTl"><div class="item mono" style="color:var(--mut2);border-top:none">loading…</div></div>
-      <div class="loghead">runtime logs <span class="lv" id="logstate">connecting…</span><button class="reconnect" id="logrec" style="display:none">↻ reconnect</button></div>
+      <div class="loghead">runtime logs · live from the running pods <span class="lv" id="logstate">connecting…</span><button class="reconnect" id="logrec" style="display:none">↻ reconnect</button></div>
       <div class="logpane"><pre id="logpre">…</pre></div>
-      <div class="loghead">latest build output</div>
+      <div class="grp" style="padding-top:18px">Delivery record</div>
+      <div class="loghead" style="margin-top:8px">deployment history · newest first</div>
+      <div class="tl" id="deployTl"><div class="item mono" style="color:var(--mut2);border-top:none">loading…</div></div>
+      <div class="loghead" id="buildhead">latest build output</div>
       <pre class="buildpre" id="buildpre">loading…</pre>`;
     document.getElementById("detclose").onclick = () => { S.selected = null; closeLogs(); box.style.display = "none"; paintApps(); };
     document.getElementById("logrec").onclick = () => openLogs(name);
@@ -480,28 +481,36 @@
       const el = document.getElementById("buildpre");
       if (el) el.textContent = ((bl && bl.logs) || "").split("\n").slice(-40).join("\n").trim() || "(no build output recorded)";
     }).catch(() => {});
-    paintDeployments(name, a.branch);
+    paintDeployments(name, a.branch, a.status?.image || "");
     refreshDetailCharts(name);
   }
 
   // real build history through the contract — render it or nothing, never invent
-  function paintDeployments(name, branch){
+  function paintDeployments(name, branch, runningImage){
     const el = document.getElementById("deployTl");
     if (!el) return;
     if (typeof kontract.deployments !== "function") { el.innerHTML = '<div class="item mono" style="color:var(--mut2);border-top:none">not available on this install</div>'; return; }
     kontract.deployments(org, name).then((list) => {
       const box = document.getElementById("deployTl");
       if (!box || S.selected !== name) return;
-      const rows = (Array.isArray(list) ? list : []).map((d) => {
+      const items = Array.isArray(list) ? list : [];
+      // the build whose image is serving right now — so history reads as a
+      // record with one clear "you are here", not a list of dead choices
+      const runningRef = runningImage ? (items.find((d) => d.image === runningImage) || {}).ref : null;
+      const rows = items.map((d) => {
         const ph = d.phase || "Building";
-        return `<div class="tlrow"><span class="st ${esc(ph === "Succeeded" ? "Live" : ph)}" style="flex:0 0 16px"><span class="dot"></span></span>
+        const running = runningRef ? d.ref === runningRef : false;
+        return `<div class="tlrow"${running ? ' style="background:rgba(0,255,111,.04)"' : ""}><span class="st ${esc(ph === "Succeeded" ? "Live" : ph)}" style="flex:0 0 16px"><span class="dot"></span></span>
           <span class="tn">BUILD #${esc(d.build ?? "?")}</span>
+          ${running ? `<span class="bdg dom-ok">▶ running now</span>` : ""}
           <span class="trr">${esc(reasonHuman(d, branch))}</span>
           ${d.revision ? `<span class="trv">${esc(String(d.revision).slice(0, 8))}</span>` : ""}
           ${ph === "Failed" ? `<span class="trv" style="color:var(--red)">failed</span>` : ph !== "Succeeded" ? `<span class="trv" style="color:var(--blue)">building…</span>` : ""}
           <span class="trd">${esc(durBetween(d.started_at, d.finished_at))}${d.started_at ? ` · ${esc(relTime(d.started_at))}` : ""}</span></div>`;
       }).join("");
       box.innerHTML = rows || '<div class="item mono" style="color:var(--mut2);border-top:none">no builds recorded yet</div>';
+      const bh = document.getElementById("buildhead");
+      if (bh && items.length) bh.textContent = `build output · build #${items[0].build ?? "?"} (latest)`;
     }).catch(() => {
       const box = document.getElementById("deployTl");
       if (box) box.innerHTML = '<div class="item mono" style="color:var(--mut2);border-top:none">history unavailable</div>';
