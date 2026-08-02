@@ -395,7 +395,7 @@
     // themes serve their own face at /kontract-icon.(svg|png); other apps get
     // a monogram so every card has the same anatomy
     const initial = esc(String(a.app_name || name).charAt(0).toUpperCase());
-    const avatar = url
+    const avatar = url && a.status?.url_ready
       ? `<span class="ava"><span class="avaM">${initial}</span><img src="${esc(url)}/kontract-icon.svg" alt="" loading="lazy" onerror="if(!this.dataset.p){this.dataset.p=1;this.src='${esc(url)}/kontract-icon.png'}else{this.style.display='none'}"></span>`
       : `<span class="ava"><span class="avaM">${initial}</span></span>`;
     return `<div class="appcard${S.selected === name ? " sel" : ""}" data-app="${esc(name)}">
@@ -403,7 +403,7 @@
         ${a.environment ? `<span class="chip">${esc(a.environment)}</span>` : ""}
         ${a.volume && a.volume.size ? `<span class="bdg vol" title="persistent volume at ${esc(a.volume.mount_path || "/data")}">▣ ${esc(fmtGi(a.volume.size))}</span>` : ""}
         ${a.custom_domain ? `<span class="bdg ${a.status?.domain_verified ? "dom-ok" : "dom-wait"}">✦ ${esc(a.custom_domain)}${a.status?.domain_verified ? "" : " · verifying"}</span>` : ""}</div>
-      ${url ? `<a class="url" href="${esc(url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(url.replace("https://",""))}</a>` : '<span class="mono" style="color:var(--mut2);font-size:11px">no endpoint yet</span>'}
+      ${url && a.status?.url_ready ? `<a class="url" href="${esc(url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(url.replace("https://",""))}</a>` : url ? `<span class="mono" style="color:var(--amber);font-size:11px" title="the platform is verifying this URL fetches end-to-end before offering the link">⧗ ${esc(url.replace("https://",""))} · propagating</span>` : '<span class="mono" style="color:var(--mut2);font-size:11px">no endpoint yet</span>'}
       <div class="sparkrow">
         <span class="sl">CPU</span><svg width="96" height="22" viewBox="0 0 96 22" preserveAspectRatio="none"><polyline points="${sparkPath(sp.cpu, 96, 22)}" fill="none" stroke="var(--green)" stroke-width="1.3"/></svg>
         <span class="sl">MEM</span><svg width="96" height="22" viewBox="0 0 96 22" preserveAspectRatio="none"><polyline points="${sparkPath(sp.mem, 96, 22)}" fill="none" stroke="var(--blue)" stroke-width="1.3"/></svg>
@@ -463,7 +463,7 @@
     const box = document.getElementById("detailP");
     box.style.display = "";
     const dUrl = typeof a.status?.url === "string" && a.status.url.startsWith("https://") ? a.status.url : "";
-    const dAva = dUrl
+    const dAva = dUrl && a.status?.url_ready
       ? `<span class="ava"><span class="avaM">${esc(String(a.app_name || name).charAt(0).toUpperCase())}</span><img src="${esc(dUrl)}/kontract-icon.svg" alt="" onerror="if(!this.dataset.p){this.dataset.p=1;this.src='${esc(dUrl)}/kontract-icon.png'}else{this.style.display='none'}"></span>`
       : "";
     box.innerHTML = `<h2 style="margin:0 0 4px;display:flex;align-items:center;gap:10px;font-size:13px">${dAva}${esc(a.app_name || name)}
