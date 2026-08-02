@@ -550,7 +550,7 @@
     return `<div class="zonehead"><span class="zn">${esc(z.display_name || z.name)}</span>
       ${z.display_name && z.display_name !== z.name ? `<span class="zsub">${esc(z.name)}</span>` : ""}
       ${z.enabled === false ? `<span class="zchip off">disabled</span>` : ""}
-      ${z.status?.phase && z.status.phase !== "Live" ? `<span class="zchip off">${esc(z.status.phase)}</span>` : ""}
+      ${z.status?.phase && z.status.phase !== "Live" && z.status.phase !== "Ready" ? `<span class="zchip off">${esc(z.status.phase)}</span>` : ""}
       <span class="spacer"></span>
       <span class="zsub">${draw ? `${draw} cpu drawn · ` : ""}${groupApps.length} app${groupApps.length === 1 ? "" : "s"}</span></div>`;
   }
