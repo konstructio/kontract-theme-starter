@@ -495,7 +495,7 @@
   async function renderLive(){
     root.innerHTML = `<div class="live-banner"><span class="dot" style="width:8px;height:8px;border-radius:50%"></span>
       Live — a read-only operations view of <b style="color:var(--ink)">&nbsp;${esc(org)}&nbsp;</b>, rendered entirely through the kontract. <a href="${DOCS}" target="_blank" rel="noopener">&nbsp;What is this? →</a></div>
-      <div class="panel"><h2 id="orgH">Organization</h2><div id="quotaP"></div></div>
+      <div class="panel"><h2 id="orgH">Organization</h2><div class="sub" id="capsLine" style="display:none"></div><div id="quotaP"></div></div>
       <div class="panel"><h2>Zones</h2><div id="zonesP">loading…</div></div>
       <div class="panel"><h2>Applications <span class="sub" style="margin:0;font-weight:400">· click one for live telemetry</span></h2><div id="appsP">loading…</div></div>
       <div class="panel" id="detailP" style="display:none"></div>
@@ -506,7 +506,27 @@
       const d = await kontract.discover(org);
       S.caps = d.capabilities || [];
       const h = document.getElementById("orgH");
-      if (h) h.innerHTML = `${esc(d.org?.display_name || org)} ${S.caps.map((c) => `<span class="chip">${esc(c)}</span>`).join(" ")}`;
+      if (h) h.textContent = d.org?.display_name || org;
+      // capabilities are real discover() data, but a bare chip row reads as
+      // broken navigation — label it as the informational line it is
+      const CAP_HINTS = {
+        "apps": "list, ship, update, and remove apps",
+        "zones": "environments to ship into",
+        "themes": "install and register kontract themes",
+        "character": "cross-theme progression ledger",
+        "runtime-logs": "live pod log streaming (the panel below)",
+        "quota": "the org allowance meter above",
+        "app-events": "push-driven refresh instead of polling",
+        "volumes": "persistent disks on apps",
+        "custom-domains": "serve apps from your own domain",
+      };
+      const cl = document.getElementById("capsLine");
+      if (cl && S.caps.length) {
+        cl.style.display = "";
+        cl.innerHTML = `this install advertises via <code style="font-family:var(--mono)">discover()</code>: ` +
+          S.caps.map((c) => `<span class="chip" title="${esc(CAP_HINTS[c] || c)}">${esc(c)}</span>`).join(" ") +
+          ` <span style="opacity:.7">— hover a capability; themes gate features on these flags</span>`;
+      }
       await refreshData();
       refreshSparks();
       // Push-driven refresh when the platform supports it; poll fallback.
